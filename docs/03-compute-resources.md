@@ -47,7 +47,7 @@ Using the AWS console, create a security group that allows internal communicatio
   Description: k8s allow internal traffic and incoming ssh/http  
   VPC: vpc.kubernetes-the-hard-way  
   Inbound rules:  
-    Type            | Protocol | Port range | Source
+    Type            | Protocol | Port range | Source  
     SSH             |   TCP    |    22      | Anywhere: 0.0.0.0/0   # to connect to the instance from your local workstation  
     Custom TCP rule |   TCP    |   6443     | Anywhere: 0.0.0.0/0   # access API from your local workstation  
     All ICMP - IPv4 |  ICMP    | 0 - 65535  | Anywhere: 0.0.0.0/0  
@@ -91,20 +91,20 @@ Create three compute instances which will host the Kubernetes control plane (cha
 * click on the "Launch instance" button
 * on the AWS Marketplace, choose the AMI "Ubuntu 16.04 LTS - Xenial (HVM)"
 * choose t2.medium as instance type
-* on the "Configure Instance Details" page:
-  Network: vpc.k8s-the-hard-way
-  Subnet: subnet.k8s-the-hard-way
-  Auto-assign Public IP: Disable
-  IAM role: None
-  Shutdown behaviour: Stop
-  Enable termination protection: left uncheck
-  Monitoring: left unchecked
+* on the "Configure Instance Details" page:  
+  Network: vpc.k8s-the-hard-way  
+  Subnet: subnet.k8s-the-hard-way  
+  Auto-assign Public IP: Disable  
+  IAM role: None  
+  Shutdown behaviour: Stop  
+  Enable termination protection: left uncheck  
+  Monitoring: left unchecked  
   Tenancy: Shared
 * on the "Add storage" page: configure a storage of size 200GB
-* on the "Add Tags" page:
-    Key        | Value
+* on the "Add Tags" page:  
+    Key        | Value  
     Name       | k8s-master-{1,2,3} (change the number for each master)
-* on the "Configure Security group" page:
+* on the "Configure Security group" page:  
   tick "Select an existing security group" and choose the "sg.k8s-the-hard-way" security group
 * choose the "k8s-the-hard-way" key pair
 
@@ -126,20 +126,20 @@ Create three instances which will host the Kubernetes worker nodes (execute the 
 * click on the "Launch instance" button
 * on the AWS Marketplace, choose the AMI "Ubuntu 16.04 LTS - Xenial (HVM)"
 * choose t2.medium as instance type
-* on the "Configure Instance Details" page:
-  Network: vpc.k8s-the-hard-way
-  Subnet: subnet.k8s-the-hard-way
-  Auto-assign Public IP: Disable
-  IAM role: None
-  Shutdown behaviour: Stop
-  Enable termination protection: left uncheck
-  Monitoring: left unchecked
+* on the "Configure Instance Details" page:  
+  Network: vpc.k8s-the-hard-way  
+  Subnet: subnet.k8s-the-hard-way  
+  Auto-assign Public IP: Disable  
+  IAM role: None  
+  Shutdown behaviour: Stop  
+  Enable termination protection: left uncheck  
+  Monitoring: left unchecked  
   Tenancy: Shared
 * on the "Add storage" page: configure a storage of size 200GB
-* on the "Add Tags" page:
-    Key      | Value
+* on the "Add Tags" page:  
+    Key      | Value  
     Name     | k8s-node-{1,2,3} (change the number for each node)
-* on the "Configure Security group" page:
+* on the "Configure Security group" page:  
   tick "Select an existing security group" and choose the "sg.k8s-the-hard-way" security group
 * choose the "k8s-hard-way" key pair
 
