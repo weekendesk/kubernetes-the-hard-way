@@ -100,7 +100,7 @@ cfssl gencert \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
   -profile=kubernetes \
-  -hostname K8S_PUBLIC_IP
+  -hostname K8S_PUBLIC_IP \
   admin-csr.json | cfssljson -bare admin
 ```
 
