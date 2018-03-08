@@ -27,11 +27,11 @@ A [subnet](https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Subnets.ht
 Create the `subnet.k8s-the-hard-way` subnet in the `vpc.k8s-the-hard-way` VPC network:
 * go in the subnet section of the AWS console
 * click on the "Create Subnet" button
-* in the form that appeared, fill in the following informations:
-  Name tag: subnet.k8s-the-hard-way
-  VPC: vpc.k8s-the-hard-way
-  VPC CIDRS: will be filled automatically when choosing the VPC
-  Availability zone: No preference
+* in the form that appeared, fill in the following informations:  
+  Name tag: subnet.k8s-the-hard-way  
+  VPC: vpc.k8s-the-hard-way  
+  VPC CIDRS: will be filled automatically when choosing the VPC  
+  Availability zone: No preference  
   IPv4 CIDR block: 10.69.1.0/24
 
 > The `10.69.1.0/24` IP address range can host up to 254 compute instances.
@@ -42,20 +42,20 @@ Using the AWS console, create a security group that allows internal communicatio
 
 * go in the security group section of the AWS console:
 * click on the "Create Security Group" button
-* in the form that appeared, fill in the following informations:
-  Security group name: sg.k8s-the-hard-way
-  Description: k8s allow internal traffic and incoming ssh/http
-  VPC: vpc.kubernetes-the-hard-way
-  Inbound rules:
+* in the form that appeared, fill in the following informations:  
+  Security group name: sg.k8s-the-hard-way  
+  Description: k8s allow internal traffic and incoming ssh/http  
+  VPC: vpc.kubernetes-the-hard-way  
+  Inbound rules:  
     Type            | Protocol | Port range | Source
-    SSH             |   TCP    |    22      | Anywhere: 0.0.0.0/0   # to connect to the instance from your local workstation
-    Custom TCP rule |   TCP    |   6443     | Anywhere: 0.0.0.0/0   # access API from your local workstation
-    All ICMP - IPv4 |  ICMP    | 0 - 65535  | Anywhere: 0.0.0.0/0
-    All TCP         |   TCP    | 0 - 65535  | Custom: 10.69.0.0/16
-    All UDP         |   UDP    | 0 - 65535  | Custom: 10.69.0.0/16
-  Outbound rules
-    Type            | Protocol | Port range | Source
-    All traffic     |   All    |    All     | Anywhere: 0.0.0.0/0   # NTP trafic, softwares updates, etc
+    SSH             |   TCP    |    22      | Anywhere: 0.0.0.0/0   # to connect to the instance from your local workstation  
+    Custom TCP rule |   TCP    |   6443     | Anywhere: 0.0.0.0/0   # access API from your local workstation  
+    All ICMP - IPv4 |  ICMP    | 0 - 65535  | Anywhere: 0.0.0.0/0  
+    All TCP         |   TCP    | 0 - 65535  | Custom: 10.69.0.0/16  
+    All UDP         |   UDP    | 0 - 65535  | Custom: 10.69.0.0/16  
+  Outbound rules  
+    Type            | Protocol | Port range | Source  
+    All traffic     |   All    |    All     | Anywhere: 0.0.0.0/0   # NTP trafic, softwares updates, etc  
 
 Go to the security group just created to ensure all the rules are here, in the Inbound and Outbound tabs.
 
