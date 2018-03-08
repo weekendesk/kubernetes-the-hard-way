@@ -4,10 +4,9 @@ In this lab you will bootstrap three Kubernetes worker nodes. The following comp
 
 ## Prerequisites
 
-The commands in this lab must be run on each worker instance: `worker-0`, `worker-1`, and `worker-2`. Login to each worker instance using the `gcloud` command. Example:
-
+The commands in this lab must be run on each node: node-0, node-1, and node-2. Login to each master with ssh:
 ```
-gcloud compute ssh worker-0
+scp -i ~/.ssh/k8s-hard-way.pem ubuntu@${node-public-ip}:~/
 ```
 
 ## Provisioning a Kubernetes Worker Node
@@ -47,17 +46,8 @@ Install the worker binaries:
 
 ```
 sudo tar -xvf cni-plugins-amd64-v0.6.0.tgz -C /opt/cni/bin/
-```
-
-```
 sudo tar -xvf cri-containerd-1.0.0-beta.1.linux-amd64.tar.gz -C /
-```
-
-```
 chmod +x kubectl kube-proxy kubelet
-```
-
-```
 sudo mv kubectl kube-proxy kubelet /usr/local/bin/
 ```
 
@@ -113,13 +103,7 @@ sudo mv 10-bridge.conf 99-loopback.conf /etc/cni/net.d/
 
 ```
 sudo mv ${HOSTNAME}-key.pem ${HOSTNAME}.pem /var/lib/kubelet/
-```
-
-```
 sudo mv ${HOSTNAME}.kubeconfig /var/lib/kubelet/kubeconfig
-```
-
-```
 sudo mv ca.pem /var/lib/kubernetes/
 ```
 
@@ -193,31 +177,16 @@ EOF
 
 ```
 sudo mv kubelet.service kube-proxy.service /etc/systemd/system/
-```
-
-```
 sudo systemctl daemon-reload
-```
-
-```
 sudo systemctl enable containerd cri-containerd kubelet kube-proxy
-```
-
-```
 sudo systemctl start containerd cri-containerd kubelet kube-proxy
 ```
 
-> Remember to run the above commands on each worker node: `worker-0`, `worker-1`, and `worker-2`.
+> Remember to run the above commands on each node.
 
 ## Verification
 
-Login to one of the controller nodes:
-
-```
-gcloud compute ssh controller-0
-```
-
-List the registered Kubernetes nodes:
+Login to one of the controller nodes and run the following commanfd:
 
 ```
 kubectl get nodes

@@ -32,12 +32,10 @@ resources:
 EOF
 ```
 
-Copy the `encryption-config.yaml` encryption config file to each controller instance:
-
+Copy the `encryption-config.yaml` encryption config file to each master:
+* ${master-public-ip} by the public ip of the master
 ```
-for instance in controller-0 controller-1 controller-2; do
-  gcloud compute scp encryption-config.yaml ${instance}:~/
-done
+scp -i ~/.ssh/k8s-hard-way.pem encryption-config.yaml ubuntu@${master-public-ip}:~/
 ```
 
 Next: [Bootstrapping the etcd Cluster](07-bootstrapping-etcd.md)

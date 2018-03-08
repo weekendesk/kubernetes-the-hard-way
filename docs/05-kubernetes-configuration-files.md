@@ -12,49 +12,41 @@ In this section you will generate kubeconfig files for the `kubelet` and `kube-p
 
 Each kubeconfig requires a Kubernetes API Server to connect to. To support high availability the IP address assigned to the external load balancer fronting the Kubernetes API Servers will be used.
 
-Retrieve the `kubernetes-the-hard-way` static IP address:
-
-```
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(address)')
-```
-
 ### The kubelet Kubernetes Configuration File
 
 When generating kubeconfig files for Kubelets the client certificate matching the Kubelet's node name must be used. This will ensure Kubelets are properly authorized by the Kubernetes [Node Authorizer](https://kubernetes.io/docs/admin/authorization/node/).
 
-Generate a kubeconfig file for each worker node:
-
+Generate a kubeconfig file for each node. In the following, replace:
+* ${KUBERNETES_PUBLIC_ADDRESS} by the cluster public IP
 ```
-for instance in worker-0 worker-1 worker-2; do
+for instance in node-1 node-2 node-3; do
   kubectl config set-cluster kubernetes-the-hard-way \
     --certificate-authority=ca.pem \
     --embed-certs=true \
     --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443 \
-    --kubeconfig=${instance}.kubeconfig
+    --kubeconfig=${node}.kubeconfig
 
-  kubectl config set-credentials system:node:${instance} \
-    --client-certificate=${instance}.pem \
-    --client-key=${instance}-key.pem \
+  kubectl config set-credentials system:node:${node} \
+    --client-certificate=${node}.pem \
+    --client-key=${node}-key.pem \
     --embed-certs=true \
-    --kubeconfig=${instance}.kubeconfig
+    --kubeconfig=${node}.kubeconfig
 
   kubectl config set-context default \
     --cluster=kubernetes-the-hard-way \
-    --user=system:node:${instance} \
-    --kubeconfig=${instance}.kubeconfig
+    --user=system:node:${node} \
+    --kubeconfig=${node}.kubeconfig
 
-  kubectl config use-context default --kubeconfig=${instance}.kubeconfig
+  kubectl config use-context default --kubeconfig=${node}.kubeconfig
 done
 ```
 
 Results:
 
 ```
-worker-0.kubeconfig
-worker-1.kubeconfig
-worker-2.kubeconfig
+node-1.kubeconfig
+node-2.kubeconfig
+node-3.kubeconfig
 ```
 
 ### The kube-proxy Kubernetes Configuration File
@@ -90,12 +82,13 @@ kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
 
 ## Distribute the Kubernetes Configuration Files
 
-Copy the appropriate `kubelet` and `kube-proxy` kubeconfig files to each worker instance:
+Copy the appropriate `kubelet` and `kube-proxy` kubeconfig files to each node:
 
+Copy the appropriate certificates and private keys to each node instance. In the following, replace:
+* ${node} by node-1, node-2 or node-3
+* ${node-public-ip} by the public ip of the node
 ```
-for instance in worker-0 worker-1 worker-2; do
-  gcloud compute scp ${instance}.kubeconfig kube-proxy.kubeconfig ${instance}:~/
-done
+scp -i ~/.ssh/k8s-hard-way.pem ${node}.kubeconfig kube-proxy.kubeconfig ubuntu@${node-public-ip}:~/
 ```
 
 Next: [Generating the Data Encryption Config and Key](06-data-encryption-keys.md)

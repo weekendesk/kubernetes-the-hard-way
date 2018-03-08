@@ -4,10 +4,9 @@ In this lab you will bootstrap the Kubernetes control plane across three compute
 
 ## Prerequisites
 
-The commands in this lab must be run on each controller instance: `controller-0`, `controller-1`, and `controller-2`. Login to each controller instance using the `gcloud` command. Example:
-
+The commands in this lab must be run on each master: `master-0`, `master-1`, and `master-2`. Login to each master with ssh:
 ```
-gcloud compute ssh controller-0
+scp -i ~/.ssh/k8s-hard-way.pem ubuntu@${master-public-ip}:~/
 ```
 
 ## Provision the Kubernetes Control Plane
@@ -28,9 +27,6 @@ Install the Kubernetes binaries:
 
 ```
 chmod +x kube-apiserver kube-controller-manager kube-scheduler kubectl
-```
-
-```
 sudo mv kube-apiserver kube-controller-manager kube-scheduler kubectl /usr/local/bin/
 ```
 
@@ -38,18 +34,10 @@ sudo mv kube-apiserver kube-controller-manager kube-scheduler kubectl /usr/local
 
 ```
 sudo mkdir -p /var/lib/kubernetes/
-```
-
-```
 sudo mv ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem encryption-config.yaml /var/lib/kubernetes/
 ```
 
-The instance internal IP address will be used to advertise the API Server to members of the cluster. Retrieve the internal IP address for the current compute instance:
-
-```
-INTERNAL_IP=$(curl -s -H "Metadata-Flavor: Google" \
-  http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip)
-```
+The instance internal IP address will be used to advertise the API Server to members of the cluster.
 
 Create the `kube-apiserver.service` systemd unit file:
 
@@ -76,7 +64,7 @@ ExecStart=/usr/local/bin/kube-apiserver \\
   --etcd-cafile=/var/lib/kubernetes/ca.pem \\
   --etcd-certfile=/var/lib/kubernetes/kubernetes.pem \\
   --etcd-keyfile=/var/lib/kubernetes/kubernetes-key.pem \\
-  --etcd-servers=https://10.240.0.10:2379,https://10.240.0.11:2379,https://10.240.0.12:2379 \\
+  --etcd-servers=https://${MASTER_1_PRIV_IP}:2379,https://${MASTER_2_PRIV_IP}:2379,https://${MASTER_3_PRIV_IP}:2379 \\
   --event-ttl=1h \\
   --experimental-encryption-provider-config=/var/lib/kubernetes/encryption-config.yaml \\
   --insecure-bind-address=127.0.0.1 \\
@@ -86,7 +74,7 @@ ExecStart=/usr/local/bin/kube-apiserver \\
   --kubelet-https=true \\
   --runtime-config=api/all \\
   --service-account-key-file=/var/lib/kubernetes/ca-key.pem \\
-  --service-cluster-ip-range=10.32.0.0/24 \\
+  --service-cluster-ip-range=10.69.2.0/24 \\
   --service-node-port-range=30000-32767 \\
   --tls-ca-file=/var/lib/kubernetes/ca.pem \\
   --tls-cert-file=/var/lib/kubernetes/kubernetes.pem \\
@@ -113,7 +101,7 @@ Documentation=https://github.com/kubernetes/kubernetes
 [Service]
 ExecStart=/usr/local/bin/kube-controller-manager \\
   --address=0.0.0.0 \\
-  --cluster-cidr=10.200.0.0/16 \\
+  --cluster-cidr=10.70.0.0/16 \\
   --cluster-name=kubernetes \\
   --cluster-signing-cert-file=/var/lib/kubernetes/ca.pem \\
   --cluster-signing-key-file=/var/lib/kubernetes/ca-key.pem \\
@@ -158,17 +146,8 @@ EOF
 
 ```
 sudo mv kube-apiserver.service kube-scheduler.service kube-controller-manager.service /etc/systemd/system/
-```
-
-```
 sudo systemctl daemon-reload
-```
-
-```
 sudo systemctl enable kube-apiserver kube-controller-manager kube-scheduler
-```
-
-```
 sudo systemctl start kube-apiserver kube-controller-manager kube-scheduler
 ```
 
@@ -189,17 +168,13 @@ etcd-0               Healthy   {"health": "true"}
 etcd-1               Healthy   {"health": "true"}
 ```
 
-> Remember to run the above commands on each controller node: `controller-0`, `controller-1`, and `controller-2`.
+> Remember to run the above commands on each master.
 
 ## RBAC for Kubelet Authorization
 
-In this section you will configure RBAC permissions to allow the Kubernetes API Server to access the Kubelet API on each worker node. Access to the Kubelet API is required for retrieving metrics, logs, and executing commands in pods.
+In this section you will configure RBAC permissions to allow the Kubernetes API Server to access the Kubelet API on each node. Access to the Kubelet API is required for retrieving metrics, logs, and executing commands in pods.
 
 > This tutorial sets the Kubelet `--authorization-mode` flag to `Webhook`. Webhook mode uses the [SubjectAccessReview](https://kubernetes.io/docs/admin/authorization/#checking-api-access) API to determine authorization.
-
-```
-gcloud compute ssh controller-0
-```
 
 Create the `system:kube-apiserver-to-kubelet` [ClusterRole](https://kubernetes.io/docs/admin/authorization/rbac/#role-and-clusterrole) with permissions to access the Kubelet API and perform most common tasks associated with managing pods:
 
@@ -256,6 +231,14 @@ In this section you will provision an external load balancer to front the Kubern
 > The compute instances created in this tutorial will not have permission to complete this section. Run the following commands from the same machine used to create the compute instances.
 
 Create the external load balancer network resources:
+* go to the Load Balancers section in the AWS console
+* click on the Create Load Balancer button
+* choose "Application Load Balancer"
+* Name: "elb-k8s-the-hard-way"  
+  Scheme: internet-facing  
+  IP address type: ipv4  
+  Listeners: http 6443  
+  Availability zones: select the VPC "k8s.the-hard-way", and for each availability zone, choose the subnet (k8s.*)
 
 ```
 gcloud compute target-pools create kubernetes-target-pool
@@ -281,14 +264,6 @@ gcloud compute forwarding-rules create kubernetes-forwarding-rule \
 ```
 
 ### Verification
-
-Retrieve the `kubernetes-the-hard-way` static IP address:
-
-```
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(address)')
-```
 
 Make a HTTP request for the Kubernetes version info:
 
