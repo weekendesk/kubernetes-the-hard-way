@@ -231,6 +231,14 @@ In this section you will provision an external load balancer to front the Kubern
 > The compute instances created in this tutorial will not have permission to complete this section. Run the following commands from the same machine used to create the compute instances.
 
 Create the external load balancer network resources:
+* go to the Load Balancers section in the AWS console
+* click on the Create Load Balancer button
+* choose "Application Load Balancer"
+* Name: "elb-k8s-the-hard-way"  
+  Scheme: internet-facing  
+  IP address type: ipv4  
+  Listeners: http 6443  
+  Availability zones: select the VPC "k8s.the-hard-way", and for each availability zone, choose the subnet (k8s.*)
 
 ```
 gcloud compute target-pools create kubernetes-target-pool
@@ -256,14 +264,6 @@ gcloud compute forwarding-rules create kubernetes-forwarding-rule \
 ```
 
 ### Verification
-
-Retrieve the `kubernetes-the-hard-way` static IP address:
-
-```
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(address)')
-```
 
 Make a HTTP request for the Kubernetes version info:
 
