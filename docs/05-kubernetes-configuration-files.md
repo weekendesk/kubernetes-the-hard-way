@@ -19,12 +19,12 @@ When generating kubeconfig files for Kubelets the client certificate matching th
 Generate a kubeconfig file for each node. In the following, replace:
 * ${KUBERNETES_PUBLIC_ADDRESS} by the cluster public IP
 ```
-for instance in node-0 node-1 node-2; do
+for instance in node-1 node-2 node-3; do
   kubectl config set-cluster kubernetes-the-hard-way \
     --certificate-authority=ca.pem \
     --embed-certs=true \
     --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443 \
-    --kubeconfig=${instance}.kubeconfig
+    --kubeconfig=${node}.kubeconfig
 
   kubectl config set-credentials system:node:${node} \
     --client-certificate=${node}.pem \
@@ -44,9 +44,9 @@ done
 Results:
 
 ```
-node-0.kubeconfig
 node-1.kubeconfig
 node-2.kubeconfig
+node-3.kubeconfig
 ```
 
 ### The kube-proxy Kubernetes Configuration File
