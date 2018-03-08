@@ -45,7 +45,7 @@ The instance internal IP address will be used to serve client requests and commu
 Each etcd member must have a unique name within an etcd cluster. Set the etcd name to match the hostname of the current  instance:
 
 ```
-ETCD_NAME=$(hostname -s)
+ETCD_NAME=master-{1,2,3}
 ```
 
 Create the `etcd.service` systemd unit file:
@@ -58,7 +58,7 @@ Documentation=https://github.com/coreos
 
 [Service]
 ExecStart=/usr/local/bin/etcd \\
-  --name ${ETCD_NAME} \\
+  --name master-1 \\
   --cert-file=/etc/etcd/kubernetes.pem \\
   --key-file=/etc/etcd/kubernetes-key.pem \\
   --peer-cert-file=/etc/etcd/kubernetes.pem \\
@@ -72,7 +72,7 @@ ExecStart=/usr/local/bin/etcd \\
   --listen-client-urls https://${INTERNAL_IP}:2379,http://127.0.0.1:2379 \\
   --advertise-client-urls https://${INTERNAL_IP}:2379 \\
   --initial-cluster-token etcd-cluster-0 \\
-  --initial-cluster controller-1=https://${MASTER_1_PUB_IP}:2380,controller-2=https://${MASTER_2_PUB_IP}:2380,controller-3=https://${MASTER_3_PUB_IP}:2380 \\
+  --initial-cluster master-1=https://${MASTER_1_PRIV_IP}:2380,master-2=https://${MASTER_2_PRIV_IP}:2380,master-3=https://${MASTER_3_PRIV_IP}:2380 \\
   --initial-cluster-state new \\
   --data-dir=/var/lib/etcd
 Restart=on-failure
