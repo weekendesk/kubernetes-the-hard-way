@@ -43,7 +43,7 @@ Using the AWS console, create a security group that allows internal communicatio
 * go in the security group section of the AWS console:
 * click on the "Create Security Group" button
 * in the form that appeared, fill in the following informations:
-  Security group name: sg.kubernetes-the-hard-way
+  Security group name: sg.k8s-the-hard-way
   Description: k8s allow internal traffic and incoming ssh/http
   VPC: vpc.kubernetes-the-hard-way
   Inbound rules:
@@ -57,17 +57,15 @@ Using the AWS console, create a security group that allows internal communicatio
     Type            | Protocol | Port range | Source
     All traffic     |   All    |    All     | Anywhere: 0.0.0.0/0   # NTP trafic, softwares updates, etc
 
-> An [external load balancer](https://aws.amazon.com/elasticloadbalancing/) will be used to expose the Kubernetes API Servers to remote clients.
-
 Go to the security group just created to ensure all the rules are here, in the Inbound and Outbound tabs.
 
 ### Kubernetes Public IP Address
-Allocate a static IP address that will be attached to the external load balancer fronting the Kubernetes API Servers:
-An load balancer is used to expose the Kubernetes API Servers to remote clients. You must allocate a static IP address that will be attached to the load balancer fronting the Kubernetes API Servers: go to the Elastic IP panel and create a new Elastic IP. You do not need to assign this IP to anything at this moment. You need to do this before the generation of SSL certificates, because you are going to use that IP address in the certificates.
 
-During the installation process, kubernetes instances (masters and nodes) must have a public IP so you can execute commands on them using ssh. So for the whole installation process, allocate an Elastic IP for each master and each node, you will delete them at the end of the installation process and only the external load balancer will have its own public IP.
+> An [external load balancer](https://aws.amazon.com/elasticloadbalancing/) will be created later to expose the Kubernetes API Servers to remote clients. You need to allocate a static IP address that will be attached to the load balancer fronting the Kubernetes API Servers: go to the Elastic IP panel and create a new Elastic IP. You do not need to assign this IP to anything at this moment, but the creation of the public IP is needed for the generation of SSL certificates, because you are going to use that IP address in the certificates.
 
-But a public IP is not enough for masters and nodes: an AWS VPC needs an Internet gateway to be internet-routable (go on the internet from the VPC instances, and join the instances from Internet). So you need to create an Internet gateway for your VPC in order to associate an Elastic IP to the VPC instances. To enable access to or from the Internet for instances in a VPC, you must do the following:
+During the installation process, kubernetes instances (masters and nodes) must have a public IP so you can execute commands on them using ssh (you will delete those Elastic IPs at the end of the installation process). So for the whole installation process, allocate an Elastic IP for each master and each node, you will delete them at the end of the installation process and only the external load balancer will have its own public IP.
+
+But you can't associate for now an Elastic IP to an instance: an AWS VPC needs an Internet gateway to be internet-routable (go on the internet from the VPC instances, and join the instances from Internet). So you need to create an Internet gateway for your VPC in order to associate an Elastic IP to the VPC instances. To enable access to or from the Internet for instances in a VPC, you must do the following:
 
 * Attach an Internet gateway to your VPC:
   ** Open the AWS VPC console, go to the Internet Gateways section. Click on the Create Internet Gateway button.
@@ -75,16 +73,12 @@ But a public IP is not enough for masters and nodes: an AWS VPC needs an Interne
   ** Select the Internet gateway that you just created, and then choose Attach to VPC.
   ** In the Attach to VPC dialog box, select your VPC (vpc.kubernetes-the-hard-way) from the list, and then choose Yes, Attach.
 * Ensure that your subnet's route table points to the Internet gateway:
-  When the subnet subnet.kubernetes was created it was automatically associated with the main route table for the VPC. By default, the main route table doesn't contain a route to an Internet gateway. So you need to create a custom route table with a route that sends traffic destined outside the VPC to the Internet gateway, and then associates it with your subnet.
+  When the subnet `subnet.k8s-the-hard-way` was created it was automatically associated with the main route table for the VPC. By default, the main route table doesn't contain a route to an Internet gateway. So you need to create a custom route table with a route that sends traffic destined outside the VPC to the Internet gateway, and then associates it with your subnet.
   ** Open the AWS VPC console, go to the Route Tables section. Click on the Create Route Table button.
-  ** In the Create Route Table dialog box, name your table rt.k8s-hard-way, select your VPC, and then choose Yes, Create.
+  ** In the Create Route Table dialog box, name your table `rt.k8s-the-hard-way`, select your VPC, and then choose Yes, Create.
   ** Select the custom route table that you just created. The details pane displays tabs for working with its routes, associations, and route propagation.
   ** On the Routes tab, choose Edit, Add another route, and add the following routes as necessary (Destination 0.0.0.0/0, select the Internet gateway ID in the Target list). Choose Save when you're done.
   ** On the Subnet Associations tab, choose Edit, select the Associate check box for the subnet, and then choose Save.
-* Ensure that instances in your subnet have a globally unique IP address:
-  go in the Elastic IPs section, allocate a new Elastic IP and associate it to the instance
-* Ensure that your network access control and security group rules allow the relevant traffic to flow to and from your instance:
-  Done at instance creation.
 
 ## Compute Instances
 
@@ -98,8 +92,8 @@ Create three compute instances which will host the Kubernetes control plane (cha
 * on the AWS Marketplace, choose the AMI "Ubuntu 16.04 LTS - Xenial (HVM)"
 * choose t2.medium as instance type
 * on the "Configure Instance Details" page:
-  Network: vpc.k8s-hard-way
-  Subnet: subnet.k8s-hard-way
+  Network: vpc.k8s-the-hard-way
+  Subnet: subnet.k8s-the-hard-way
   Auto-assign Public IP: Disable
   IAM role: None
   Shutdown behaviour: Stop
@@ -110,9 +104,8 @@ Create three compute instances which will host the Kubernetes control plane (cha
 * on the "Add Tags" page:
     Key        | Value
     Name       | k8s-master-{1,2,3} (change the number for each master)
-    k8s-master | true
 * on the "Configure Security group" page:
-  tick "Select an existing security group" and choose the "sg.kubernetes-the-hard-way" security group
+  tick "Select an existing security group" and choose the "sg.k8s-the-hard-way" security group
 * choose the "k8s-the-hard-way" key pair
 
 > Ask a collegue to give you this ssh private key and copy it in your `~/.ssh` directory. You can also choose to use a new key pair, in that case generate a new key pair.
@@ -134,8 +127,8 @@ Create three instances which will host the Kubernetes worker nodes (execute the 
 * on the AWS Marketplace, choose the AMI "Ubuntu 16.04 LTS - Xenial (HVM)"
 * choose t2.medium as instance type
 * on the "Configure Instance Details" page:
-  Network: vpc.k8s-hard-way
-  Subnet: subnet.k8s-hard-way
+  Network: vpc.k8s-the-hard-way
+  Subnet: subnet.k8s-the-hard-way
   Auto-assign Public IP: Disable
   IAM role: None
   Shutdown behaviour: Stop
@@ -146,7 +139,6 @@ Create three instances which will host the Kubernetes worker nodes (execute the 
 * on the "Add Tags" page:
     Key      | Value
     Name     | k8s-node-{1,2,3} (change the number for each node)
-    k8s-node | true
 * on the "Configure Security group" page:
   tick "Select an existing security group" and choose the "sg.k8s-the-hard-way" security group
 * choose the "k8s-hard-way" key pair
