@@ -4,10 +4,9 @@ In this lab you will bootstrap the Kubernetes control plane across three compute
 
 ## Prerequisites
 
-The commands in this lab must be run on each controller instance: `controller-0`, `controller-1`, and `controller-2`. Login to each controller instance using the `gcloud` command. Example:
-
+The commands in this lab must be run on each master: `master-0`, `master-1`, and `master-2`. Login to each master with ssh:
 ```
-gcloud compute ssh controller-0
+scp -i ~/.ssh/k8s-hard-way.pem ubuntu@${master-public-ip}:~/
 ```
 
 ## Provision the Kubernetes Control Plane
@@ -28,9 +27,6 @@ Install the Kubernetes binaries:
 
 ```
 chmod +x kube-apiserver kube-controller-manager kube-scheduler kubectl
-```
-
-```
 sudo mv kube-apiserver kube-controller-manager kube-scheduler kubectl /usr/local/bin/
 ```
 
@@ -38,18 +34,10 @@ sudo mv kube-apiserver kube-controller-manager kube-scheduler kubectl /usr/local
 
 ```
 sudo mkdir -p /var/lib/kubernetes/
-```
-
-```
 sudo mv ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem encryption-config.yaml /var/lib/kubernetes/
 ```
 
-The instance internal IP address will be used to advertise the API Server to members of the cluster. Retrieve the internal IP address for the current compute instance:
-
-```
-INTERNAL_IP=$(curl -s -H "Metadata-Flavor: Google" \
-  http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip)
-```
+The instance internal IP address will be used to advertise the API Server to members of the cluster.
 
 Create the `kube-apiserver.service` systemd unit file:
 
@@ -158,17 +146,8 @@ EOF
 
 ```
 sudo mv kube-apiserver.service kube-scheduler.service kube-controller-manager.service /etc/systemd/system/
-```
-
-```
 sudo systemctl daemon-reload
-```
-
-```
 sudo systemctl enable kube-apiserver kube-controller-manager kube-scheduler
-```
-
-```
 sudo systemctl start kube-apiserver kube-controller-manager kube-scheduler
 ```
 
@@ -189,11 +168,11 @@ etcd-0               Healthy   {"health": "true"}
 etcd-1               Healthy   {"health": "true"}
 ```
 
-> Remember to run the above commands on each controller node: `controller-0`, `controller-1`, and `controller-2`.
+> Remember to run the above commands on each master.
 
 ## RBAC for Kubelet Authorization
 
-In this section you will configure RBAC permissions to allow the Kubernetes API Server to access the Kubelet API on each worker node. Access to the Kubelet API is required for retrieving metrics, logs, and executing commands in pods.
+In this section you will configure RBAC permissions to allow the Kubernetes API Server to access the Kubelet API on each node. Access to the Kubelet API is required for retrieving metrics, logs, and executing commands in pods.
 
 > This tutorial sets the Kubelet `--authorization-mode` flag to `Webhook`. Webhook mode uses the [SubjectAccessReview](https://kubernetes.io/docs/admin/authorization/#checking-api-access) API to determine authorization.
 
