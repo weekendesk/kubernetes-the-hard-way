@@ -6,7 +6,8 @@ In this lab you will provision a [PKI Infrastructure](https://en.wikipedia.org/w
 
 In this section you will provision a Certificate Authority that can be used to generate additional TLS certificates.
 
-Create the CA configuration file:
+Create the Certificate Authority configuration file and the Certificate Authority certificate signing request:
+
 
 ```
 cat > ca-config.json <<EOF
@@ -31,21 +32,21 @@ Create the CA certificate signing request:
 ```
 cat > ca-csr.json <<EOF
 {
-  "CN": "Kubernetes",
+  "CN": "Kubernetes", 
   "key": {
     "algo": "rsa",
     "size": 2048
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
-      "O": "Kubernetes",
-      "OU": "CA",
-      "ST": "Oregon"
+      "C": "FR",        
+      "L": "Paris",
+      "O": "Weekendesk",
+      "OU": "Devops team",
+      "ST": "île-de-France"
     }
   ]
-}
+} 
 EOF
 ```
 
@@ -80,11 +81,11 @@ cat > admin-csr.json <<EOF
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
+      "C": "FR",        
+      "L": "Paris",
       "O": "system:masters",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
+      "OU": "Devops team",
+      "ST": "île-de-France"
     }
   ]
 }
@@ -99,6 +100,7 @@ cfssl gencert \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
   -profile=kubernetes \
+  -hostname K8S_PUBLIC_IP
   admin-csr.json | cfssljson -bare admin
 ```
 
@@ -113,42 +115,37 @@ admin.pem
 
 Kubernetes uses a [special-purpose authorization mode](https://kubernetes.io/docs/admin/authorization/node/) called Node Authorizer, that specifically authorizes API requests made by [Kubelets](https://kubernetes.io/docs/concepts/overview/components/#kubelet). In order to be authorized by the Node Authorizer, Kubelets must use a credential that identifies them as being in the `system:nodes` group, with a username of `system:node:<nodeName>`. In this section you will create a certificate for each Kubernetes worker node that meets the Node Authorizer requirements.
 
-Generate a certificate and private key for each Kubernetes worker node:
-
+Generate a certificate and private key for each Kubernetes node. In the following, replace:
+* ${EXTERNAL_IP} by the instance public IP
+* ${INTERNAL_IP} by the instance private IP
 ```
-for instance in worker-0 worker-1 worker-2; do
-cat > ${instance}-csr.json <<EOF
+for node in node-0 node-1 node-2; do
+cat > ${node}-csr.json <<EOF
 {
-  "CN": "system:node:${instance}",
+  "CN": "system:node:${node}",
   "key": {
     "algo": "rsa",
     "size": 2048
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
+      "C": "FR",
+      "L": "Paris",
       "O": "system:nodes",
       "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
+      "ST": "île-de-France"
     }
   ]
 }
 EOF
 
-EXTERNAL_IP=$(gcloud compute instances describe ${instance} \
-  --format 'value(networkInterfaces[0].accessConfigs[0].natIP)')
-
-INTERNAL_IP=$(gcloud compute instances describe ${instance} \
-  --format 'value(networkInterfaces[0].networkIP)')
-
 cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${instance},${EXTERNAL_IP},${INTERNAL_IP} \
+  -hostname=${node},${EXTERNAL_IP},${INTERNAL_IP} \
   -profile=kubernetes \
-  ${instance}-csr.json | cfssljson -bare ${instance}
+  ${node}-csr.json | cfssljson -bare ${node}
 done
 ```
 
@@ -177,11 +174,11 @@ cat > kube-proxy-csr.json <<EOF
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
+      "C": "FR",
+      "L": "Paris",
       "O": "system:node-proxier",
       "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
+      "ST": "île-de-France"
     }
   ]
 }
@@ -208,17 +205,10 @@ kube-proxy.pem
 
 ### The Kubernetes API Server Certificate
 
-The `kubernetes-the-hard-way` static IP address will be included in the list of subject alternative names for the Kubernetes API Server certificate. This will ensure the certificate can be validated by remote clients.
+The cluster public static IP address will be included in the list of subject alternative names for the Kubernetes API Server certificate. This will ensure the certificate can be validated by remote clients.
 
-Retrieve the `kubernetes-the-hard-way` static IP address:
-
-```
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(address)')
-```
-
-Create the Kubernetes API Server certificate signing request:
+Create the Kubernetes API Server certificate signing request. In the following, replace:
+* ${KUBERNETES_PUBLIC_ADDRESS} by the cluster public IP
 
 ```
 cat > kubernetes-csr.json <<EOF
@@ -230,11 +220,11 @@ cat > kubernetes-csr.json <<EOF
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
+      "C": "FR",
+      "L": "Paris",
       "O": "Kubernetes",
       "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
+      "ST": "Île-de-France"
     }
   ]
 }
@@ -262,20 +252,22 @@ kubernetes.pem
 
 ## Distribute the Client and Server Certificates
 
-Copy the appropriate certificates and private keys to each worker instance:
-
+First, retrieve informations (like public IP, instance id) of each master and node:
 ```
-for instance in worker-0 worker-1 worker-2; do
-  gcloud compute scp ca.pem ${instance}-key.pem ${instance}.pem ${instance}:~/
-done
+aws ec2 describe-instances --query 'Reservations[*].Instances[0].{InstanceId:InstanceId,PrivateIpAddress:PrivateIpAddress,PublicDnsName:PublicDnsName,PublicIpAddress:PublicIpAddress}'
 ```
 
-Copy the appropriate certificates and private keys to each controller instance:
-
+Copy the appropriate certificates and private keys to each node instance. In the following, replace:
+* ${node} by node-1, node-2 or node-3
+* ${node-public-ip} by the public ip of the node
 ```
-for instance in controller-0 controller-1 controller-2; do
-  gcloud compute scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem ${instance}:~/
-done
+scp -i ~/.ssh/k8s-hard-way.pem ca.pem ${node}-key.pem ${node}.pem ubuntu@${node-public-ip}:~/
+```
+
+Copy the appropriate certificates and private keys to each master instance. In the following, replace:
+* ${master-public-ip} by the public ip of the master
+```
+scp -i ~/.ssh/k8s-hard-way.pem ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem ubuntu@${master-public-ip}:~/
 ```
 
 > The `kube-proxy` and `kubelet` client certificates will be used to generate client authentication configuration files in the next lab.
