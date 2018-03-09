@@ -192,7 +192,6 @@ cfssl gencert \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
   -profile=kubernetes \
-  -hostname 34.242.131.149 \
   kube-proxy-csr.json | cfssljson -bare kube-proxy
 ```
 
