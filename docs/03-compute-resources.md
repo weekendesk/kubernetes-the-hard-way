@@ -80,11 +80,11 @@ But you can't associate for now an Elastic IP to an instance: an AWS VPC needs a
   ** On the Routes tab, choose Edit, Add another route, and add the following routes as necessary (Destination 0.0.0.0/0, select the Internet gateway ID in the Target list). Choose Save when you're done.
   ** On the Subnet Associations tab, choose Edit, select the Associate check box for the subnet, and then choose Save.
 
-## Compute Instances
+## Create Instances
 
 The instances in this lab will be provisioned using [Ubuntu Server](https://www.ubuntu.com/server) 16.04, which has good support for the [cri-containerd container runtime](https://github.com/containerd/cri-containerd). Each instance will be provisioned with a fixed private IP address to simplify the Kubernetes bootstrapping process.
 
-### Kubernetes Controllers
+### Kubernetes Masters
 
 Create three compute instances which will host the Kubernetes control plane (change the name for each worker in the **tags** section):
 * go in the instances section of the AWS console
@@ -118,9 +118,9 @@ root:~# sed -i 's/^#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.co
 root:~# sysctl -p /etc/sysctl.conf
 ```
 
-### Kubernetes Workers
+### Kubernetes Nodes
 
-Create three instances which will host the Kubernetes worker nodes (execute the following procedure three times):
+Create three instances which will host the Kubernetes nodes (execute the following procedure three times):
 
 * go in the instances section of the AWS console
 * click on the "Launch instance" button
