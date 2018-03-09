@@ -116,7 +116,6 @@ admin.pem
 Kubernetes uses a [special-purpose authorization mode](https://kubernetes.io/docs/admin/authorization/node/) called Node Authorizer, that specifically authorizes API requests made by [Kubelets](https://kubernetes.io/docs/concepts/overview/components/#kubelet). In order to be authorized by the Node Authorizer, Kubelets must use a credential that identifies them as being in the `system:nodes` group, with a username of `system:node:<nodeName>`. In this section you will create a certificate for each Kubernetes node that meets the Node Authorizer requirements.
 
 Generate a certificate and private key for each Kubernetes node. In the following, replace:
-* ${EXTERNAL_IP} by the instance public IP
 * ${INTERNAL_IP} by the instance private IP
 ```
 for node in node-1 node-2 node-3; do
@@ -143,7 +142,7 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${node},${EXTERNAL_IP},${INTERNAL_IP} \
+  -hostname=${node},${INTERNAL_IP} \
   -profile=kubernetes \
   ${node}-csr.json | cfssljson -bare ${node}
 done
@@ -193,6 +192,7 @@ cfssl gencert \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
   -profile=kubernetes \
+  -hostname 34.242.131.149 \
   kube-proxy-csr.json | cfssljson -bare kube-proxy
 ```
 
@@ -238,7 +238,7 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${MASTER_1_PRIV_IP},${MASTER_3_PRIV_IP},${MASTER_3_PRIV_IP},${K8S_PUBLIC_ADDRESS},127.0.0.1,kubernetes.default \
+    -hostname=10.32.0.1,${MASTER_1_PRIV_IP},${MASTER_3_PRIV_IP},${MASTER_3_PRIV_IP},${K8S_PUBLIC_ADDRESS},127.0.0.1,kubernetes.default \
   -profile=kubernetes \
   kubernetes-csr.json | cfssljson -bare kubernetes
 ```
@@ -251,11 +251,6 @@ kubernetes.pem
 ```
 
 ## Distribute the Client and Server Certificates
-
-First, retrieve informations (like public IP, instance id) of each master and node:
-```
-aws ec2 describe-instances --query 'Reservations[*].Instances[0].{InstanceId:InstanceId,PrivateIpAddress:PrivateIpAddress,PublicDnsName:PublicDnsName,PublicIpAddress:PublicIpAddress}'
-```
 
 Copy the appropriate certificates and private keys to each node instance. In the following, replace:
 * ${node} by node-1, node-2 or node-3
