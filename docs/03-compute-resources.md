@@ -47,15 +47,15 @@ Using the AWS console, create a security group that allows internal communicatio
   Description: k8s allow internal traffic and incoming ssh/http  
   VPC: vpc.kubernetes-the-hard-way  
   Inbound rules:  
-  |  Type            | Protocol | Port range | Source  
-  |  SSH             |   TCP    |    22      | Anywhere: 0.0.0.0/0   # to connect to the instance from your local workstation  
-  |  Custom TCP rule |   TCP    |   6443     | Anywhere: 0.0.0.0/0   # access API from your local workstation  
-  |  All ICMP - IPv4 |  ICMP    | 0 - 65535  | Anywhere: 0.0.0.0/0  
-  |  All TCP         |   TCP    | 0 - 65535  | Custom: 10.69.0.0/16  
-  |  All UDP         |   UDP    | 0 - 65535  | Custom: 10.69.0.0/16  
+  |  Type            | Protocol | Port range | Source  |
+  |  SSH             |   TCP    |    22      | Anywhere: 0.0.0.0/0   # to connect to the instance from your local workstation  |
+  |  Custom TCP rule |   TCP    |   6443     | Anywhere: 0.0.0.0/0   # access API from your local workstation  |
+  |  All ICMP - IPv4 |  ICMP    | 0 - 65535  | Anywhere: 0.0.0.0/0  |
+  |  All TCP         |   TCP    | 0 - 65535  | Custom: 10.69.0.0/16  |
+  |  All UDP         |   UDP    | 0 - 65535  | Custom: 10.69.0.0/16  |
   Outbound rules  
-  |  Type          | Protocol | Port range | Source  
-  |  All traffic     |   All    |    All     | Anywhere: 0.0.0.0/0   # NTP trafic, softwares updates, etc  
+  |  Type          | Protocol | Port range | Source  |
+  |  All traffic     |   All    |    All     | Anywhere: 0.0.0.0/0   # NTP trafic, softwares updates, etc  |
 
 Go to the security group just created to ensure all the rules are here, in the Inbound and Outbound tabs.
 
