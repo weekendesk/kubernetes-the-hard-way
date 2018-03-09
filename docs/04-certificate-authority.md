@@ -113,13 +113,13 @@ admin.pem
 
 ### The Kubelet Client Certificates
 
-Kubernetes uses a [special-purpose authorization mode](https://kubernetes.io/docs/admin/authorization/node/) called Node Authorizer, that specifically authorizes API requests made by [Kubelets](https://kubernetes.io/docs/concepts/overview/components/#kubelet). In order to be authorized by the Node Authorizer, Kubelets must use a credential that identifies them as being in the `system:nodes` group, with a username of `system:node:<nodeName>`. In this section you will create a certificate for each Kubernetes worker node that meets the Node Authorizer requirements.
+Kubernetes uses a [special-purpose authorization mode](https://kubernetes.io/docs/admin/authorization/node/) called Node Authorizer, that specifically authorizes API requests made by [Kubelets](https://kubernetes.io/docs/concepts/overview/components/#kubelet). In order to be authorized by the Node Authorizer, Kubelets must use a credential that identifies them as being in the `system:nodes` group, with a username of `system:node:<nodeName>`. In this section you will create a certificate for each Kubernetes node that meets the Node Authorizer requirements.
 
 Generate a certificate and private key for each Kubernetes node. In the following, replace:
 * ${EXTERNAL_IP} by the instance public IP
 * ${INTERNAL_IP} by the instance private IP
 ```
-for node in node-0 node-1 node-2; do
+for node in node-1 node-2 node-3; do
 cat > ${node}-csr.json <<EOF
 {
   "CN": "system:node:${node}",
@@ -152,12 +152,12 @@ done
 Results:
 
 ```
-worker-0-key.pem
-worker-0.pem
-worker-1-key.pem
-worker-1.pem
-worker-2-key.pem
-worker-2.pem
+node-1-key.pem
+node-1.pem
+node-2-key.pem
+node-3.pem
+node-3-key.pem
+node-3.pem
 ```
 
 ### The kube-proxy Client Certificate
