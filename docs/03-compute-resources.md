@@ -15,12 +15,12 @@ In this section a dedicated [Virtual Private Cloud](https://aws.amazon.com/vpc/)
 Create the `k8s.the-hard-way` custom VPC:
 * go in the VPC section of the AWS console
 * click on the "Create VPC" button
-* in the form that appeared, fill in the following informations:
-  Name tag: vpc.k8s-the-hard-way
-  IPv4 CIDR block: 10.69.0.0/16
-  IPv6 CIDR: "No IPv6 CIDR block"
-  block: leave that empty
-  Tenancy: default
+* in the form that appeared, fill in the following informations:  
+  Name tag: vpc.k8s-the-hard-way  
+  IPv4 CIDR block: 10.69.0.0/16  
+  IPv6 CIDR: "No IPv6 CIDR block"  
+  block: leave that empty  
+  Tenancy: default  
 
 A [subnet](https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Subnets.html) must be provisioned with an IP address range large enough to assign a private IP address to each master and node in the Kubernetes cluster.
 
@@ -45,17 +45,19 @@ Using the AWS console, create a security group that allows internal communicatio
 * in the form that appeared, fill in the following informations:  
   Security group name: sg.k8s-the-hard-way  
   Description: k8s allow internal traffic and incoming ssh/http  
-  VPC: vpc.kubernetes-the-hard-way  
+  VPC: vpc.kubernetes-the-hard-way
+  
 Inbound rules:  
-|  Type            | Protocol | Port range | Source  |
-|  SSH             |   TCP    |    22      | Anywhere: 0.0.0.0/0   # to connect to the instance from your local workstation  |
-|  Custom TCP rule |   TCP    |   6443     | Anywhere: 0.0.0.0/0   # access API from your local workstation  |
-|  All ICMP - IPv4 |  ICMP    | 0 - 65535  | Anywhere: 0.0.0.0/0  |
-|  All TCP         |   TCP    | 0 - 65535  | Custom: 10.69.0.0/16  |
-|  All UDP         |   UDP    | 0 - 65535  | Custom: 10.69.0.0/16  |
+  Type            | Protocol | Port range | Source  
+   -------------- | :------: | ---------: | ------: |
+  SSH             |   TCP    |    22      | Anywhere: 0.0.0.0/0   # to connect to the instance from your local workstation  
+  Custom TCP rule |   TCP    |   6443     | Anywhere: 0.0.0.0/0   # access API from your local workstation  
+  All ICMP - IPv4 |  ICMP    | 0 - 65535  | Anywhere: 0.0.0.0/0  
+  All TCP         |   TCP    | 0 - 65535  | Custom: 10.69.0.0/16  
+  All UDP         |   UDP    | 0 - 65535  | Custom: 10.69.0.0/16  
 Outbound rules  
-|  Type          | Protocol | Port range | Source  |
-|  All traffic     |   All    |    All     | Anywhere: 0.0.0.0/0   # NTP trafic, softwares updates, etc  |
+  Type          | Protocol | Port range | Source  
+  All traffic     |   All    |    All     | Anywhere: 0.0.0.0/0   # NTP trafic, softwares updates, etc  
 
 Go to the security group just created to ensure all the rules are here, in the Inbound and Outbound tabs.
 
