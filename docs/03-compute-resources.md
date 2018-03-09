@@ -49,10 +49,9 @@ Using the AWS console, create a security group that allows internal communicatio
   
 Inbound rules:  
   Type            | Protocol | Port range | Source  
-   -------------- | :------: | ---------: | ------: |
   SSH             |   TCP    |    22      | Anywhere: 0.0.0.0/0   # to connect to the instance from your local workstation  
   Custom TCP rule |   TCP    |   6443     | Anywhere: 0.0.0.0/0   # access API from your local workstation  
-  All ICMP - IPv4 |  ICMP    | 0 - 65535  | Anywhere: 0.0.0.0/0  
+  All ICMP - IPv4 |  ICMP    | 0 - 65535  | Anywhere: 0.0.0.0/0   
   All TCP         |   TCP    | 0 - 65535  | Custom: 10.69.0.0/16  
   All UDP         |   UDP    | 0 - 65535  | Custom: 10.69.0.0/16  
 Outbound rules  
@@ -70,17 +69,17 @@ During the installation process, kubernetes instances (masters and nodes) must h
 But you can't associate for now an Elastic IP to an instance: an AWS VPC needs an Internet gateway to be internet-routable (go on the internet from the VPC instances, and join the instances from Internet). So you need to create an Internet gateway for your VPC in order to associate an Elastic IP to the VPC instances. To enable access to or from the Internet for instances in a VPC, you must do the following:
 
 * Attach an Internet gateway to your VPC:
-  ** Open the AWS VPC console, go to the Internet Gateways section. Click on the Create Internet Gateway button.
-  ** Choose the name "ig.k8s-the-hard-way" and then choose Yes, Create.
-  ** Select the Internet gateway that you just created, and then choose Attach to VPC.
-  ** In the Attach to VPC dialog box, select your VPC (vpc.kubernetes-the-hard-way) from the list, and then choose Yes, Attach.
+  * Open the AWS VPC console, go to the Internet Gateways section. Click on the Create Internet Gateway button.
+  * Choose the name "ig.k8s-the-hard-way" and then choose Yes, Create.
+  * Select the Internet gateway that you just created, and then choose Attach to VPC.
+  * In the Attach to VPC dialog box, select your VPC (vpc.kubernetes-the-hard-way) from the list, and then choose Yes, Attach.
 * Ensure that your subnet's route table points to the Internet gateway:
   When the subnet `subnet.k8s-the-hard-way` was created it was automatically associated with the main route table for the VPC. By default, the main route table doesn't contain a route to an Internet gateway. So you need to create a custom route table with a route that sends traffic destined outside the VPC to the Internet gateway, and then associates it with your subnet.
-  ** Open the AWS VPC console, go to the Route Tables section. Click on the Create Route Table button.
-  ** In the Create Route Table dialog box, name your table `rt.k8s-the-hard-way`, select your VPC, and then choose Yes, Create.
-  ** Select the custom route table that you just created. The details pane displays tabs for working with its routes, associations, and route propagation.
-  ** On the Routes tab, choose Edit, Add another route, and add the following routes as necessary (Destination 0.0.0.0/0, select the Internet gateway ID in the Target list). Choose Save when you're done.
-  ** On the Subnet Associations tab, choose Edit, select the Associate check box for the subnet, and then choose Save.
+  * Open the AWS VPC console, go to the Route Tables section. Click on the Create Route Table button.
+  * In the Create Route Table dialog box, name your table `rt.k8s-the-hard-way`, select your VPC, and then choose Yes, Create.
+  * Select the custom route table that you just created. The details pane displays tabs for working with its routes, associations, and route propagation.
+  * On the Routes tab, choose Edit, Add another route, and add the following routes as necessary (Destination 0.0.0.0/0, select the Internet gateway ID in the Target list). Choose Save when you're done.
+  * On the Subnet Associations tab, choose Edit, select the Associate check box for the subnet, and then choose Save.
 
 ## Create Instances
 
