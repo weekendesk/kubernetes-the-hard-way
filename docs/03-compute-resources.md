@@ -38,12 +38,12 @@ Create the `subnet.k8s-the-hard-way` subnet in the `vpc.k8s-the-hard-way` VPC ne
 
 ### Firewall Rules
 
-Using the AWS console, create a security group that allows internal communication in the VPC across all protocols, allow incoming ssh and connexions on port 6443 (API) and all outgoing connexions (NTP, DNS resolution, softwares update):
+Using the AWS console, configure the security group to allow internal communication in the VPC across all protocols, allow incoming ssh and connexions on port 6443 (API) and all outgoing connexions (NTP, DNS resolution, softwares update):
 
-* go in the security group section of the AWS console:
+* go in the security group section of the AWS console
 * click on the default security group of the VPC
+* change the description (from "default VPC security group" to "k8s allow internal traffic and incoming ssh/http")
 * add a tag "Name" with the value "sg.k8s-the-hard-way"
-* maybe change the description (from "default VPC security group" to "k8s allow internal traffic and incoming ssh/http")
 * add the following rules:  
 Inbound rules:  
   Type            | Protocol | Port range | Source  
@@ -58,15 +58,14 @@ Outbound rules
 
 ### Kubernetes Public IP Address
 
-If an instance has a public IP, the IP will be different if the machine reboots. If a machine has an Elastic IP, the IP will be the same after a reboot.
+A few word about an instance having a public IP.
+If an instance has a public IP (configuration parameter to enable in the instance configuration), the IP will be different if the machine reboots. If a machine has an Elastic IP, the IP will be the same after a reboot.
 
-> An [external load balancer](https://aws.amazon.com/elasticloadbalancing/) will be created later to expose the Kubernetes API Servers to remote clients. You need to allocate a static IP address that will be attached to the load balancer fronting the Kubernetes API Servers: go to the Elastic IP panel and create a new Elastic IP. You do not need to assign this IP to anything at this moment, but the creation of the public IP is needed for the generation of SSL certificates, because you are going to use that IP address in the certificates.
+> An [external load balancer](https://aws.amazon.com/elasticloadbalancing/) will be created later to expose the Kubernetes API Servers to remote clients. You need to allocate a static IP address that will be attached to the load balancer fronting the Kubernetes API Servers: go to the Elastic IP panel and create a new Elastic IP (by choosing an elastic IP and not a public IP for the ELB, the IP will be static accross reboot, as seen previously). You do not need to assign this IP to anything at this moment, but the creation of the public IP is needed for the generation of SSL certificates, because you are going to use that IP address in the certificates.
 
 During the installation process, kubernetes instances (masters and nodes) must have a public IP so you can execute commands on them using ssh. The default public IP that instance can have will be enough.
 
-So for the whole installation process, allocate an Elastic IP for each master and each node, you will delete them at the end of the installation process and only the external load balancer will have its own public IP.
-
-But you can't associate for now an Elastic IP to an instance: an AWS VPC needs an Internet gateway to be internet-routable (go on the internet from the VPC instances, and join the instances from Internet). So you need to create an Internet gateway for your VPC in order to associate an Elastic IP to the VPC instances. To enable access to or from the Internet for instances in a VPC, you must do the following:
+Now, an AWS VPC needs an Internet gateway to be internet-routable (meaning: go on the internet from the VPC instances, and join the instances from Internet). So you need to create an Internet gateway for your VPC. To enable access to or from the Internet for instances in a VPC, you must do the following:
 
 * Attach an Internet gateway to your VPC:
   * Open the AWS VPC console, go to the Internet Gateways section. Click on the Create Internet Gateway button.
@@ -93,7 +92,7 @@ Create three compute instances which will host the Kubernetes control plane (cha
 * on the "Configure Instance Details" page:  
   Network: vpc.k8s-the-hard-way  
   Subnet: subnet.k8s-the-hard-way  
-  Auto-assign Public IP: Disable  
+  Auto-assign Public IP: Enable
   IAM role: None  
   Shutdown behaviour: Stop  
   Enable termination protection: left uncheck  
@@ -128,7 +127,7 @@ Create three instances which will host the Kubernetes nodes (execute the followi
 * on the "Configure Instance Details" page:  
   Network: vpc.k8s-the-hard-way  
   Subnet: subnet.k8s-the-hard-way  
-  Auto-assign Public IP: Disable  
+  Auto-assign Public IP: Enable
   IAM role: None  
   Shutdown behaviour: Stop  
   Enable termination protection: left uncheck  
