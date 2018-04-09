@@ -108,7 +108,7 @@ Create three compute instances which will host the Kubernetes control plane (cha
 
 > Ask a collegue to give you this ssh private key and copy it in your `~/.ssh` directory. You can also choose to use a new key pair, in that case generate a new key pair.
 
-Then, create a new Elastic IP, associate it to the newly created instance, ssh into the machine and enable ip forwarding.
+Then ssh into the machine and enable ip forwarding.
 ```
 $ ssh -i ~/.ssh/k8s-the-hard-way.pem ubuntu@public-ip-of-the-instance
 ubuntu:~$ sudo -i
@@ -141,7 +141,7 @@ Create three instances which will host the Kubernetes nodes (execute the followi
   tick "Select an existing security group" and choose the "sg.k8s-the-hard-way" security group
 * choose the "k8s-hard-way" key pair
 
-Then, create a new Elastic IP, associate it to the newly created instance, ssh into the machine and enable ip forwarding.
+Then ssh into the machine and enable ip forwarding.
 ```
 $ ssh -i ~/.ssh/k8s-the-hard-way.pem ubuntu@public-ip-of-the-instance
 ubuntu:~$ sudo -i
