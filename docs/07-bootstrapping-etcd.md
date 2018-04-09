@@ -6,7 +6,7 @@ Kubernetes components are stateless and store cluster state in [etcd](https://gi
 
 The commands in this lab must be run on each master: `master-0`, `master-1`, and `master-2`. Login to each master with ssh:
 ```
-scp -i ~/.ssh/k8s-hard-way.pem ubuntu@${master-public-ip}:~/
+ssh -i ~/.ssh/k8s-hard-way.pem ubuntu@${master-public-ip}:~/
 ```
 
 ## Bootstrapping an etcd Cluster Member
