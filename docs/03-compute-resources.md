@@ -76,7 +76,6 @@ Now, an AWS VPC needs an Internet gateway to be internet-routable (meaning: go o
   When the subnet `subnet.k8s-the-hard-way` was created it was automatically associated with the main route table for the VPC. By default, the main route table doesn't contain a route to an Internet gateway. So you need to edit this route table by adding a route that sends traffic destined outside the VPC to the Internet gateway, and then associates it with your subnet.
   * Open the AWS VPC console, go to the Route Tables section. Click on the default route table created with your VPC.
   * On the Routes tab, choose Edit, Add another route, and add the following routes as necessary (Destination 0.0.0.0/0, select the Internet gateway ID in the Target list). Choose Save when you're done.
-  * On the Subnet Associations tab, choose Edit, select the Associate check box for the subnet, and then choose Save.
 
 ## Create Instances
 
