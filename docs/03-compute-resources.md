@@ -92,7 +92,7 @@ Create three compute instances which will host the Kubernetes control plane (cha
 * on the "Configure Instance Details" page:  
   Network: vpc.k8s-the-hard-way  
   Subnet: subnet.k8s-the-hard-way  
-  Auto-assign Public IP: Enable
+  Auto-assign Public IP: Enable  
   IAM role: None  
   Shutdown behaviour: Stop  
   Enable termination protection: left uncheck  
