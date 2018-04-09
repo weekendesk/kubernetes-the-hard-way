@@ -95,7 +95,8 @@ EOF
 Generate the `admin` client certificate and private key:
 
 ```
-cfssl gencert \
+$ K8S_PUBLIC_IP=1.2.3.4 (the Elastic IP reserved in previous chapter)
+$ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
@@ -118,7 +119,10 @@ Kubernetes uses a [special-purpose authorization mode](https://kubernetes.io/doc
 Generate a certificate and private key for each Kubernetes node. In the following, replace:
 * ${INTERNAL_IP} by the instance private IP
 ```
-for node in node-1 node-2 node-3; do
+# do the following for each node:
+
+$ node=node-1
+$ INTERNAL_IP=1.2.3.4
 cat > ${node}-csr.json <<EOF
 {
   "CN": "system:node:${node}",
@@ -206,8 +210,7 @@ kube-proxy.pem
 
 The cluster public static IP address will be included in the list of subject alternative names for the Kubernetes API Server certificate. This will ensure the certificate can be validated by remote clients.
 
-Create the Kubernetes API Server certificate signing request. In the following, replace:
-* ${KUBERNETES_PUBLIC_ADDRESS} by the cluster public IP
+Create the Kubernetes API Server certificate signing request.
 
 ```
 cat > kubernetes-csr.json <<EOF
@@ -230,7 +233,9 @@ cat > kubernetes-csr.json <<EOF
 EOF
 ```
 
-Generate the Kubernetes API Server certificate and private key:
+Generate the Kubernetes API Server certificate and private key. In the following, replace:
+* ${K8S_PUBLIC_ADDRESS} by the cluster public IP
+* ${MASTER_i_PRIV_IP} by the private ip of the master n°i
 
 ```
 cfssl gencert \
