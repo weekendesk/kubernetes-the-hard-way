@@ -1,0 +1,15 @@
+---
+- hosts: 127.0.0.1
+  connection: local
+  tasks:
+  - name: Generate the CA certificate and private key
+    command: "cfssl gencert -initca files/ca-csr.json | cfssljson -bare ca && pwd && tree"
+
+  - name: Generate the admin client certificate and private ke
+    #command: "cfssl gencert -initca files/ca-csr.json | cfssljson -bare ca && pwd && tree"
+    command: "ls"
+    
+- hosts: k8s_workers,k8s_masters
+  tasks:
+  - name: ls
+    command: ls
