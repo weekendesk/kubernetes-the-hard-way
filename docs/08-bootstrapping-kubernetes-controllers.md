@@ -226,9 +226,7 @@ EOF
 
 ## The Kubernetes Frontend Load Balancer
 
-In this section you will provision an external load balancer to front the Kubernetes API Servers. The `kubernetes-the-hard-way` static IP address will be attached to the resulting load balancer.
-
-> The compute instances created in this tutorial will not have permission to complete this section. Run the following commands from the same machine used to create the compute instances.
+In this section you will provision an external load balancer to front the Kubernetes API Servers. The `kubernetes-the-hard-way` Elastic static IP address will be attached to the resulting load balancer.
 
 Create the external load balancer network resources:
 * go to the Load Balancers section in the AWS console
@@ -239,29 +237,6 @@ Create the external load balancer network resources:
   IP address type: ipv4  
   Listeners: http 6443  
   Availability zones: select the VPC "k8s.the-hard-way", and for each availability zone, choose the subnet (k8s.*)
-
-```
-gcloud compute target-pools create kubernetes-target-pool
-```
-
-```
-gcloud compute target-pools add-instances kubernetes-target-pool \
-  --instances controller-0,controller-1,controller-2
-```
-
-```
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(name)')
-```
-
-```
-gcloud compute forwarding-rules create kubernetes-forwarding-rule \
-  --address ${KUBERNETES_PUBLIC_ADDRESS} \
-  --ports 6443 \
-  --region $(gcloud config get-value compute/region) \
-  --target-pool kubernetes-target-pool
-```
 
 ### Verification
 
