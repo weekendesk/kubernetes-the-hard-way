@@ -6,7 +6,7 @@ module "masters" {
   source = "./modules/masters"
 
   suffix              = "${var.suffix}"
-  number_of_instances = "3"
+  number_of_instances = "1"
   ami                 = "${local.ami_id}"
   sg_ids              = ["${aws_security_group.internal_traffic.id}"]
   subnet_id           = "${aws_subnet.cluster_instances.id}"

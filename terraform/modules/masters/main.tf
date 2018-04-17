@@ -39,3 +39,7 @@ data "template_cloudinit_config" "setup_instance" {
     content      = "${data.template_file.enable_ip_forwarding_script.rendered}"
   }
 }
+
+output "instance_ids" {
+  value = "${aws_instance.instance.*.id}"
+}

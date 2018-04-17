@@ -26,3 +26,13 @@ resource "aws_route" "out" {
   destination_cidr_block = "0.0.0.0/0"
   depends_on             = ["aws_default_route_table.cluster"]
 }
+
+resource "aws_eip" "k8s_api" {
+  vpc        = true
+  instance   = "${element(module.masters.instance_ids, 0)}"
+  depends_on = ["aws_internet_gateway.k8s_api"]
+
+  tags {
+    Name = "k8s_api.${var.suffix}"
+  }
+}
