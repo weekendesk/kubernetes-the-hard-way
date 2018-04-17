@@ -242,7 +242,7 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-    -hostname=10.32.0.1,${MASTER_1_PRIV_IP},${MASTER_3_PRIV_IP},${MASTER_3_PRIV_IP},${K8S_PUBLIC_ADDRESS},127.0.0.1,kubernetes.default \
+    -hostname=10.32.0.1,${MASTER_1_PRIV_IP},${MASTER_2_PRIV_IP},${MASTER_3_PRIV_IP},${K8S_PUBLIC_ADDRESS},127.0.0.1,kubernetes.default \
   -profile=kubernetes \
   kubernetes-csr.json | cfssljson -bare kubernetes
 ```
