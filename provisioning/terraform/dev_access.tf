@@ -1,7 +1,3 @@
-locals {
-  devs_cidr_block = "195.68.50.34/32"
-}
-
 resource "aws_security_group" "ssh" {
   name        = "ssh.${var.suffix}"
   description = "Allow inbound ssh traffic"
@@ -11,7 +7,7 @@ resource "aws_security_group" "ssh" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${local.devs_cidr_block}"]
+    cidr_blocks = "${var.wed_offices_cidrs}"
   }
 
   tags {
@@ -29,7 +25,7 @@ resource "aws_security_group" "devs" {
     from_port   = 0
     to_port     = 0
     protocol    = "icmp"
-    cidr_blocks = ["${local.devs_cidr_block}"]
+    cidr_blocks = "${var.wed_offices_cidrs}"
   }
 
   # api access
@@ -37,6 +33,6 @@ resource "aws_security_group" "devs" {
     from_port   = 6443
     to_port     = 6443
     protocol    = "tcp"
-    cidr_blocks = ["${local.devs_cidr_block}"]
+    cidr_blocks = "${var.wed_offices_cidrs}"
   }
 }
