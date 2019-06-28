@@ -15,7 +15,7 @@ It should be able to get you to a working single master (insecure) kubernetes se
 
 You can run the following command to check if you've missed something (don't worry, it won't install anything on your machine)
 ```sh
-ansible-playbook kthw-playbook.yml -t check_local_prerequisites -l localhost
+ansible-playbook kthw-playbook.yml -t check_prerequisites -l localhost
 ```
 
 

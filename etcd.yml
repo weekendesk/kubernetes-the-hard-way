@@ -1,0 +1,11 @@
+---
+
+- name: Etcd | Download
+  become: yes
+  script: ./scripts/download_etcd {{ etcd3_version }}
+  args:
+    creates: /tmp/.download_etcd
+  when: "'etcd_peers' in group_names"
+  tags:
+  - etcd
+  - download_etcd

@@ -1,11 +1,11 @@
 ---
 - hosts: all
   tasks:
-  - name: Assert local prerequisites are met
+  - name: Assert that local prerequisites are met
     import_tasks: ./check_local_prerequisites.yml
     when: "'localhost' in group_names"
     tags:
-    - check_local_prerequisites
+    - check_prerequisites
   
   - name: Root CA
     import_tasks: ./root_ca.yml
@@ -13,42 +13,17 @@
     tags:
     - generate_the_root_ca    
 
-
-  - name: Download etcd
-    become: yes
-    script: ./scripts/download_etcd {{ etcd3_version }}
-    args:
-      creates: /tmp/.download_etcd
-    when: "'etcd_peers' in group_names"
-    tags:
-    - download_etcd
-
+  - name: Etcd
+    import_tasks: ./etcd.yml
 
   - name: Install a CRI-compatible container runtime
-    import_tasks: ./install_container_runtime.yml
+    import_tasks: ./container_runtime.yml
     when: "'k8s_nodes' in group_names"
     tags:
     - install_container_runtime
 
+  - name: Setup the Kubernetes Control Plane
+    import_tasks: ./k8s_control_plane.yml
 
-  - name: Download kubernetes control plane components
-    become: yes
-    script: ./scripts/download_kubernetes_control_plane {{ kubernetes_version }}
-    args:
-      creates: /tmp/.download_kubernetes_control_plane
-    when: "'masters' in group_names"
-    tags:
-    - download_kubernetes
-    - download_kubernetes_control_plane
- 
- 
-  - name: Download kubernetes worker components
-    become: yes
-    script: ./scripts/download_kubernetes_worker_components {{ kubernetes_version }}
-    args:
-      creates: /tmp/.download_kubernetes_worker_components
-    when: "'workers' in group_names"
-    tags:
-    - download_kubernetes
-    - download_kubernetes_worker_components
-
+  - name: Setup the Kubernetes Workers
+    import_tasks: ./k8s_workers.yml

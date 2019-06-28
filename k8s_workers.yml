@@ -1,0 +1,12 @@
+---
+
+- name: Kubernetes | Workers | Download worker components
+  become: yes
+  script: ./scripts/download_kubernetes_worker_components {{ kubernetes_version }}
+  args:
+    creates: /tmp/.download_kubernetes_worker_components
+  when: "'workers' in group_names"
+  tags:
+  - kubernetes
+  - kubernetes_workers
+  - download_kubernetes_worker_components

@@ -1,0 +1,12 @@
+---
+
+- name: Kubernetes | Control Plane | Download control plane components
+  become: yes
+  script: ./scripts/download_kubernetes_control_plane {{ kubernetes_version }}
+  args:
+    creates: /tmp/.download_kubernetes_control_plane
+  when: "'masters' in group_names"
+  tags:
+  - kubernetes
+  - kubernetes_control_plane
+  - download_kubernetes_control_plane
