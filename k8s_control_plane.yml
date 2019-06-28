@@ -5,6 +5,12 @@
   when: "'localhost' in group_names"
   tags:
   - generate_the_admin_cert
+  
+- name: Controller Manager
+  import_tasks: ./controller_manager_client_cert.yml
+  when: "'localhost' in group_names"
+  tags:
+  - generate_the_controller_manager_cert
 
 - name: Kubernetes | Control Plane | Download control plane components
   become: yes
