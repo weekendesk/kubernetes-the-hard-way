@@ -1,5 +1,12 @@
 ---
 
+- name: Worker Kubelet Certificates
+  import_tasks: ./worker_kubelet_client_certs.yml
+  when: "'localhost' in group_names"
+  tags:
+  - generate_the_worker_kubelet_client_certs
+
+
 - name: Kubernetes | Workers | Download worker components
   become: yes
   script: ./scripts/download_kubernetes_worker_components {{ kubernetes_version }}
@@ -7,6 +14,6 @@
     creates: /tmp/.download_kubernetes_worker_components
   when: "'workers' in group_names"
   tags:
-  - kubernetes
-  - kubernetes_workers
   - download_kubernetes_worker_components
+
+  

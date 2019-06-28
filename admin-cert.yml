@@ -1,0 +1,87 @@
+---
+- name: Admin Certificate | Require the Root CA to be accessible
+  block:
+  - name: Admin Certificate |stat the required Root CA files
+    stat:
+      path: "{{ item }}"
+    with_items: 
+    - "{{ root_ca_cert_file }}"
+    - "{{ root_ca_key_file }}"
+    register: root_ca_files_stat_result
+
+  - name: Admin Certificate | the required Root CA files must exist
+    assert:
+      that: "{{ root_ca_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == root_ca_files_stat_result.results | length }}"
+      fail_msg: "you need to generate the Root CA in {{ root_ca_dir }}"
+
+- name: Admin Certificate | create the work directory
+  file:
+    path: "{{ pki_dir }}/admin-cert"
+    state: directory
+    recurse: yes
+
+
+- name: Admin Certificate | build the signing configuration
+  copy:
+    dest: "{{ pki_dir }}/admin-cert/signing-config.json"
+    content: |
+      {
+        "signing": {
+          "default": {
+            "expiry": "8760h"
+          },
+          "profiles": {
+            "kubernetes": {
+              "usages": ["signing", "key encipherment", "server auth", "client auth"],
+              "expiry": "8760h"
+            }
+          }
+        }
+      }
+    mode: 0600
+
+- name: Admin Certificate | build the CSR (Certificate Signing Request)
+  copy:
+    dest: "{{ pki_dir }}/admin-cert/csr.json"
+    content: |
+      {
+        "CN": "admin",
+        "key": {
+          "algo": "rsa",
+          "size": 2048
+        },
+        "names": [
+          {
+            "C": "US",
+            "L": "Portland",
+            "O": "system:masters",
+            "OU": "Kubernetes The Hard Way",
+            "ST": "Oregon"
+          }
+        ]
+      }
+    mode: 0600
+
+- name: Admin Certificate | generate
+  shell: |
+    pushd {{ pki_dir }}/admin-cert ;
+    cfssl gencert \
+      -ca={{ root_ca_cert_file }} \
+      -ca-key={{ root_ca_key_file }} \
+      -config=signing-config.json \
+      -profile=kubernetes \
+      csr.json | cfssljson -bare admin
+    popd ;
+  args:
+    executable: bash
+    creates: "{{ pki_dir }}/admin-cert/ca-key.pem"
+
+  
+- name: Admin Certificate | cleanup
+  file: 
+    path: "{{ pki_dir }}/admin-cert/{{ item }}"
+    state: absent
+  with_items:
+  - signing-config.json
+  - csr.json
+  - admin.csr

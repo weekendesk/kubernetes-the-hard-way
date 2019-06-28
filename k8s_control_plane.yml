@@ -1,5 +1,11 @@
 ---
 
+- name: Admin Certificate 
+  import_tasks: ./admin-cert.yml
+  when: "'localhost' in group_names"
+  tags:
+  - generate_the_admin_cert
+
 - name: Kubernetes | Control Plane | Download control plane components
   become: yes
   script: ./scripts/download_kubernetes_control_plane {{ kubernetes_version }}
@@ -7,6 +13,4 @@
     creates: /tmp/.download_kubernetes_control_plane
   when: "'masters' in group_names"
   tags:
-  - kubernetes
-  - kubernetes_control_plane
   - download_kubernetes_control_plane

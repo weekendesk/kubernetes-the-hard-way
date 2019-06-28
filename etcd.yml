@@ -7,5 +7,4 @@
     creates: /tmp/.download_etcd
   when: "'etcd_peers' in group_names"
   tags:
-  - etcd
   - download_etcd

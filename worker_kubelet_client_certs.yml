@@ -1,0 +1,91 @@
+---
+- name: Kubelet Certificates | Require the Root CA to be accessible
+  block:
+  - name: Kubelet Certificates | stat the required Root CA files
+    stat:
+      path: "{{ item }}"
+    with_items: 
+    - "{{ root_ca_cert_file }}"
+    - "{{ root_ca_key_file }}"
+    register: root_ca_files_stat_result
+
+  - name: Kubelet Certificates | the required Root CA files must exist
+    assert:
+      that: "{{ root_ca_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == root_ca_files_stat_result.results | length }}"
+      fail_msg: "you need to generate the Root CA in {{ root_ca_dir }}"
+
+- name: Kubelet Certificates | create the work directories
+  file:
+    path: "{{ pki_dir }}/worker-kubelet-client-certs/{{ item }}"
+    state: directory
+    recurse: yes
+  with_items: "{{ kubernetes_workers }}"
+
+- name: Kubelet Certificates | build the signing configuration
+  copy:
+    dest: "{{ pki_dir }}/worker-kubelet-client-certs/signing-config.json"
+    content: |
+      {
+        "signing": {
+          "default": {
+            "expiry": "8760h"
+          },
+          "profiles": {
+            "kubernetes": {
+              "usages": ["signing", "key encipherment", "server auth", "client auth"],
+              "expiry": "8760h"
+            }
+          }
+        }
+      }
+    mode: 0600
+
+- name: Kubelet Certificates | build the CSRs (Certificate Signing Requests)
+  copy:
+    dest: "{{ pki_dir }}/worker-kubelet-client-certs/{{ item }}/csr.json"
+    content: |
+      {
+        "CN": "system:node:{{ item }}",
+        "key": {
+          "algo": "rsa",
+          "size": 2048
+        },
+        "names": [
+          {
+            "C": "US",
+            "L": "Portland",
+            "O": "system:nodes",
+            "OU": "Kubernetes The Hard Way",
+            "ST": "Oregon"
+          }
+        ]
+      }
+    mode: 0600
+  with_items: "{{ kubernetes_workers }}"
+
+- name: Kubelet Certificates | generate
+  shell: |
+    pushd {{ pki_dir }}/worker-kubelet-client-certs/{{ item }} ;
+    cfssl gencert \
+      -ca={{ root_ca_cert_file }} \
+      -ca-key={{ root_ca_key_file }} \
+      -config=../signing-config.json \
+      -hostname={{ item }},{{ hostvars[item].ansible_all_ipv4_addresses | join(',') }} \
+      -profile=kubernetes \
+      csr.json | cfssljson -bare ${item}
+    popd ;
+  args:
+    executable: bash
+  with_items: "{{ kubernetes_workers }}"
+
+  
+- name: Kubelet Certificates | cleanup
+  file: 
+    path: "{{ pki_dir }}/worker-kubelet-client-certs/signing-config.json"
+    state: absent
+  
+- name: Kubelet Certificates | cleanup
+  file: 
+    path: "{{ pki_dir }}/worker-kubelet-client-certs/{{ item }}"
+    state: absent
+  with_items: "{{ kubernetes_workers |  product(['csr.json', 'cert.csr']) | map('join', '/') | list }}"

@@ -1,13 +1,13 @@
 ---
 - name: Root CA | create the work directory
   file:
-    path: "{{ playbook_dir }}/pki/root-ca"
+    path: "{{ root_ca_dir }}"
     state: directory
     recurse: yes
 
-- name: Root CA | build the CSR (Certificate Signing Request) for the root CA
+- name: Root CA | build the CSR (Certificate Signing Request)
   copy:
-    dest: "{{ playbook_dir }}/pki/root-ca/root-ca-csr.json"
+    dest: "{{ root_ca_dir }}/csr.json"
     content: |
       {
         "CN": "Kubernetes",
@@ -29,18 +29,18 @@
 
 - name: Root CA | generate
   shell: |
-    pushd {{ playbook_dir }}/pki/root-ca ;
-    cfssl gencert -initca root-ca-csr.json | cfssljson -bare ca ;
+    pushd {{ root_ca_dir }} ;
+    cfssl gencert -initca csr.json | cfssljson -bare ca ;
     popd ;
   args:
     executable: bash
-    creates: "{{ playbook_dir }}/pki/root-ca/ca-key.pem"
+    creates: "{{ root_ca_dir }}/ca-key.pem"
 
   
 - name: Root CA | cleanup
   file: 
-    path: "{{ playbook_dir }}/pki/root-ca/{{ item }}"
+    path: "{{ root_ca_dir }}/{{ item }}"
     state: absent
   with_items:
-  - root-ca-csr.json
+  - csr.json
   - ca.csr

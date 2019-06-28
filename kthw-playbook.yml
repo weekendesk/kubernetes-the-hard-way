@@ -11,7 +11,7 @@
     import_tasks: ./root_ca.yml
     when: "'localhost' in group_names"
     tags:
-    - generate_the_root_ca    
+    - generate_the_root_ca
 
   - name: Etcd
     import_tasks: ./etcd.yml
