@@ -4,10 +4,6 @@ require 'open-uri'
 
 Vagrant.require_version ">= 2.2.4"
 
-unless Vagrant.has_plugin?("vagrant-scp")
-  raise 'vagrant-scp is not installed! Please run vagrant plugin install vagrant-scp'
-end
-
 hosts = {
   masters: [
     "master-node"
