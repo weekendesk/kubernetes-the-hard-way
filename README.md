@@ -9,6 +9,7 @@ It should be able to get you to a working single master (insecure) kubernetes se
 
 # prerequisites
 - vagrant
+- ansible
 - cfssl
 - cfssljson
 
