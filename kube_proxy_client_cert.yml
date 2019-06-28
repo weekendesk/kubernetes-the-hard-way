@@ -1,7 +1,7 @@
 ---
-- name: Controller Manager | Client Certificate | Require the Root CA to be accessible
+- name: Kube-proxy | Client Certificate | Require the Root CA to be accessible
   block:
-  - name: Controller Manager | Client Certificate | stat the required Root CA files
+  - name: Kube-proxy | Client Certificate | stat the required Root CA files
     stat:
       path: "{{ item }}"
     with_items: 
@@ -9,20 +9,20 @@
     - "{{ root_ca_key_file }}"
     register: root_ca_files_stat_result
 
-  - name: Controller Manager | Client Certificate | the required Root CA files must exist
+  - name: Kube-proxy | Client Certificate | the required Root CA files must exist
     assert:
       that: "{{ root_ca_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == root_ca_files_stat_result.results | length }}"
       fail_msg: "you need to generate the Root CA in {{ root_ca_dir }}"
 
-- name: Controller Manager | Client Certificate | create the work directories
+- name: Kube-proxy | Client Certificate | create the work directories
   file:
-    path: "{{ pki_dir }}/controller_manager-client_cert"
+    path: "{{ pki_dir }}/kube_proxy-client_cert"
     state: directory
     recurse: yes
 
-- name: Controller Manager | Client Certificate | build the signing configuration
+- name: Kube-proxy | Client Certificate | build the signing configuration
   copy:
-    dest: "{{ pki_dir }}/controller_manager-client_cert/signing-config.json"
+    dest: "{{ pki_dir }}/kube_proxy-client_cert/signing-config.json"
     content: |
       {
         "signing": {
@@ -39,12 +39,12 @@
       }
     mode: 0600
 
-- name: Controller Manager | Client Certificate | build the CSRs (Certificate Signing Requests)
+- name: Kube-proxy | Client Certificate | build the CSRs (Certificate Signing Requests)
   copy:
-    dest: "{{ pki_dir }}/controller_manager-client_cert/csr.json"
+    dest: "{{ pki_dir }}/kube_proxy-client_cert/csr.json"
     content: |
       {
-        "CN": "system:kube-controller-manager",
+        "CN": "system:kube-proxy",
         "key": {
           "algo": "rsa",
           "size": 2048
@@ -53,7 +53,7 @@
           {
             "C": "US",
             "L": "Portland",
-            "O": "system:kube-controller-manager",
+            "O": "system:node-proxier",
             "OU": "Kubernetes The Hard Way",
             "ST": "Oregon"
           }
@@ -61,24 +61,24 @@
       }
     mode: 0600
 
-- name: Controller Manager | Client Certificate | generate
+- name: Kube-proxy | Client Certificate | generate
   shell: |
-    pushd {{ pki_dir }}/controller_manager-client_cert ;
+    pushd {{ pki_dir }}/kube_proxy-client_cert ;
     cfssl gencert \
       -ca={{ root_ca_cert_file }} \
       -ca-key={{ root_ca_key_file }} \
       -config=signing-config.json \
       -profile=kubernetes \
-      csr.json | cfssljson -bare kube-controller-manager
+      csr.json | cfssljson -bare kube-proxy
     popd ;
   args:
     executable: bash
 
-- name: Controller Manager | Client Certificate | cleanup
+- name: Kube-proxy | Client Certificate | cleanup
   file: 
-    path: "{{ pki_dir }}/controller_manager-client_cert/{{ item }}"
+    path: "{{ pki_dir }}/kube_proxy-client_cert/{{ item }}"
     state: absent
   with_items: 
   - signing-config.json
   - csr.json
-  - kube-controller-manager.csr
+  - kube-proxy.csr

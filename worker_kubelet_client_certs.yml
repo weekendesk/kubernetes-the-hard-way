@@ -1,7 +1,7 @@
 ---
-- name: Kubelet Certificates | Require the Root CA to be accessible
+- name: Kubelet | Client Certificate | Require the Root CA to be accessible
   block:
-  - name: Kubelet Certificates | stat the required Root CA files
+  - name: Kubelet | Client Certificate | stat the required Root CA files
     stat:
       path: "{{ item }}"
     with_items: 
@@ -9,19 +9,19 @@
     - "{{ root_ca_key_file }}"
     register: root_ca_files_stat_result
 
-  - name: Kubelet Certificates | the required Root CA files must exist
+  - name: Kubelet | Client Certificate | the required Root CA files must exist
     assert:
       that: "{{ root_ca_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == root_ca_files_stat_result.results | length }}"
       fail_msg: "you need to generate the Root CA in {{ root_ca_dir }}"
 
-- name: Kubelet Certificates | create the work directories
+- name: Kubelet | Client Certificate | create the work directories
   file:
     path: "{{ pki_dir }}/worker_kubelet-client_certs/{{ item }}"
     state: directory
     recurse: yes
   with_items: "{{ kubernetes_workers }}"
 
-- name: Kubelet Certificates | build the signing configuration
+- name: Kubelet | Client Certificate | build the signing configuration
   copy:
     dest: "{{ pki_dir }}/worker_kubelet-client_certs/signing-config.json"
     content: |
@@ -40,7 +40,7 @@
       }
     mode: 0600
 
-- name: Kubelet Certificates | build the CSRs (Certificate Signing Requests)
+- name: Kubelet | Client Certificate | build the CSRs (Certificate Signing Requests)
   copy:
     dest: "{{ pki_dir }}/worker_kubelet-client_certs/{{ item }}/csr.json"
     content: |
@@ -63,7 +63,7 @@
     mode: 0600
   with_items: "{{ kubernetes_workers }}"
 
-- name: Kubelet Certificates | generate
+- name: Kubelet | Client Certificate | generate
   shell: |
     pushd {{ pki_dir }}/worker_kubelet-client_certs/{{ item }} ;
     cfssl gencert \
@@ -79,12 +79,12 @@
   with_items: "{{ kubernetes_workers }}"
 
   
-- name: Kubelet Certificates | cleanup
+- name: Kubelet | Client Certificate | cleanup
   file: 
     path: "{{ pki_dir }}/worker_kubelet-client_certs/signing-config.json"
     state: absent
   
-- name: Kubelet Certificates | cleanup
+- name: Kubelet | Client Certificate | cleanup
   file: 
     path: "{{ pki_dir }}/worker_kubelet-client_certs/{{ item }}"
     state: absent

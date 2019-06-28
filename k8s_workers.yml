@@ -1,6 +1,6 @@
 ---
 
-- name: Worker Kubelet Certificates
+- name: Kubelet
   import_tasks: ./worker_kubelet_client_certs.yml
   when: "'localhost' in group_names"
   tags:
