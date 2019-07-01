@@ -1,5 +1,6 @@
 ---
 - hosts: all
+  gather_facts: yes
   tasks:
   - name: Assert that local prerequisites are met
     import_tasks: ./check_local_prerequisites.yml

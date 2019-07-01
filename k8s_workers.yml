@@ -1,10 +1,10 @@
 ---
 
 - name: Kubelet
-  import_tasks: ./worker_kubelet_client_certs.yml
+  import_tasks: ./kubelet_client_certs.yml
   when: "'localhost' in group_names"
   tags:
-  - generate_the_worker_kubelet_client_certs
+  - generate_the_kubelet_client_certs
 
 
 - name: Kubernetes | Workers | Download worker components
@@ -17,3 +17,15 @@
   - download_kubernetes_worker_components
 
   
+- name: Kubernetes | Workers | Distribute certificates
+  copy:
+    src: "{{ item }}"
+    dest: "{{ ansible_env.HOME }}"
+    mode: 0400
+  with_items:
+  - "{{ root_ca_cert_file }}"
+  - "{{ pki_dir }}/kubelet-client_certs/{{ inventory_hostname }}/kubelet.pem"
+  - "{{ pki_dir }}/kubelet-client_certs/{{ inventory_hostname }}/kubelet-key.pem"
+  when: "'workers' in group_names"
+  tags:
+  - distribute_certificates

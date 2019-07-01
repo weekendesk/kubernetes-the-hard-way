@@ -55,8 +55,8 @@
             "C": "US",
             "L": "Portland",
             "O": "Kubernetes",
-            "OU": "Kubernetes The Hard Way",
-            "ST": "Oregon"
+            "OU": "{{ kubernetes_cluster_name }}",
+            "ST": "Somewhere nice"
           }
         ]
       }
@@ -72,7 +72,7 @@
     -config=signing-config.json \
     -hostname=127.0.0.1,kubernetes.default,{{ kubernetes_masters | map('extract', hostvars, 'ansible_all_ipv4_addresses') | list | flatten | join(',') }} \
     -profile=kubernetes \
-    csr.json | cfssljson -bare kubernetes
+    csr.json | cfssljson -bare api-server
 
     popd ;
   args:
@@ -85,5 +85,5 @@
   with_items: 
   - signing-config.json
   - csr.json
-  - kubernetes.csr
+  - api-server.csr
 

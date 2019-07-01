@@ -54,8 +54,8 @@
             "C": "US",
             "L": "Portland",
             "O": "system:kube-controller-manager",
-            "OU": "Kubernetes The Hard Way",
-            "ST": "Oregon"
+            "OU": "{{ kubernetes_cluster_name }}",
+            "ST": "Somewhere nice"
           }
         ]
       }

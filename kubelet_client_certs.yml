@@ -16,14 +16,14 @@
 
 - name: Kubelet | Client Certificate | create the work directories
   file:
-    path: "{{ pki_dir }}/worker_kubelet-client_certs/{{ item }}"
+    path: "{{ pki_dir }}/kubelet-client_certs/{{ item }}"
     state: directory
     recurse: yes
   with_items: "{{ kubernetes_workers }}"
 
 - name: Kubelet | Client Certificate | build the signing configuration
   copy:
-    dest: "{{ pki_dir }}/worker_kubelet-client_certs/signing-config.json"
+    dest: "{{ pki_dir }}/kubelet-client_certs/signing-config.json"
     content: |
       {
         "signing": {
@@ -42,7 +42,7 @@
 
 - name: Kubelet | Client Certificate | build the CSRs (Certificate Signing Requests)
   copy:
-    dest: "{{ pki_dir }}/worker_kubelet-client_certs/{{ item }}/csr.json"
+    dest: "{{ pki_dir }}/kubelet-client_certs/{{ item }}/csr.json"
     content: |
       {
         "CN": "system:node:{{ item }}",
@@ -55,8 +55,8 @@
             "C": "US",
             "L": "Portland",
             "O": "system:nodes",
-            "OU": "Kubernetes The Hard Way",
-            "ST": "Oregon"
+            "OU": "{{ kubernetes_cluster_name }}",
+            "ST": "Somewhere nice"
           }
         ]
       }
@@ -65,14 +65,14 @@
 
 - name: Kubelet | Client Certificate | generate
   shell: |
-    pushd {{ pki_dir }}/worker_kubelet-client_certs/{{ item }} ;
+    pushd {{ pki_dir }}/kubelet-client_certs/{{ item }} ;
     cfssl gencert \
       -ca={{ root_ca_cert_file }} \
       -ca-key={{ root_ca_key_file }} \
       -config=../signing-config.json \
       -hostname={{ item }},{{ hostvars[item].ansible_all_ipv4_addresses | join(',') }} \
       -profile=kubernetes \
-      csr.json | cfssljson -bare ${item}
+      csr.json | cfssljson -bare kubelet
     popd ;
   args:
     executable: bash
@@ -81,11 +81,11 @@
   
 - name: Kubelet | Client Certificate | cleanup
   file: 
-    path: "{{ pki_dir }}/worker_kubelet-client_certs/signing-config.json"
+    path: "{{ pki_dir }}/kubelet-client_certs/signing-config.json"
     state: absent
   
 - name: Kubelet | Client Certificate | cleanup
   file: 
-    path: "{{ pki_dir }}/worker_kubelet-client_certs/{{ item }}"
+    path: "{{ pki_dir }}/kubelet-client_certs/{{ item }}"
     state: absent
-  with_items: "{{ kubernetes_workers |  product(['csr.json', 'cert.csr']) | map('join', '/') | list }}"
+  with_items: "{{ kubernetes_workers |  product(['csr.json', 'kubelet.csr']) | map('join', '/') | list }}"
