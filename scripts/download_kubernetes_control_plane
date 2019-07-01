@@ -1,22 +1,26 @@
 #!/usr/bin/env bash
 K8S_RELEASE_VERSION=$1
 
+function wrap_hyperkube () {
+    local kube_component=$1
+    sudo bash -c "echo \"#!/usr/bin/env bash\" > /usr/bin/$kube_component"
+    sudo bash -c "echo \"hyperkube $kube_component \\\$@\" >> /usr/bin/$kube_component"
+    sudo chmod +x "/usr/bin/$kube_component"
+}
 
 pushd /tmp
 
 container_id=$(docker create gcr.io/google-containers/hyperkube:$K8S_RELEASE_VERSION)
-docker cp $container_id:/hyperkube
+
+sudo docker cp $container_id:/hyperkube /usr/bin/hyperkube
+sudo chmod u+x /usr/bin/hyperkube
+
 docker rm -f $container_id
 
-chmod u+x hyperkube
-cp hyperkube /usr/bin/kubelet
-cp hyperkube /usr/bin/proxy
-cp hyperkube /usr/bin/kubectl
-cp hyperkube /usr/bin/scheduler
-cp hyperkube /usr/bin/controller-manager
-cp hyperkube /usr/bin/cloud-controller-manager
-cp hyperkube /usr/bin/apiserver
-rm hyperkube
+for component in cloud-controller-manager kube-apiserver kube-controller-manager kube-proxy kube-scheduler kubectl kubelet
+do 
+    wrap_hyperkube "$component"; 
+done
 
 touch .download_kubernetes_control_plane
 
