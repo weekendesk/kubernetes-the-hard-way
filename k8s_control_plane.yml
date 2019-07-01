@@ -1,16 +1,22 @@
 ---
 
-- name: Admin Certificate 
+- name: Kubernetes | Control Plane | Admin certificate 
   import_tasks: ./admin-cert.yml
   when: "'localhost' in group_names"
   tags:
   - generate_the_admin_cert
   
-- name: Controller Manager
+- name: Kubernetes | Control Plane | Controller Manager | Client certificate
   import_tasks: ./controller_manager_client_cert.yml
   when: "'localhost' in group_names"
   tags:
   - generate_the_controller_manager_cert
+
+- name: Kubernetes | Control Plane | API Server | Server certificate
+  import_tasks: ./api_server_cert.yml
+  when: "'localhost' in group_names"
+  tags:
+  - generate_the_api_server_cert
 
 - name: Kubernetes | Control Plane | Download control plane components
   become: yes
@@ -20,3 +26,4 @@
   when: "'masters' in group_names"
   tags:
   - download_kubernetes_control_plane
+

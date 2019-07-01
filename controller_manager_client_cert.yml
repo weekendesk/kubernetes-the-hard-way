@@ -1,7 +1,7 @@
 ---
-- name: Controller Manager | Client Certificate | Require the Root CA to be accessible
+- name: Kubernetes | Control Plane | Controller Manager | Client Certificate | Require the Root CA to be accessible
   block:
-  - name: Controller Manager | Client Certificate | stat the required Root CA files
+  - name: Kubernetes | Control Plane | Controller Manager | Client Certificate | stat the required Root CA files
     stat:
       path: "{{ item }}"
     with_items: 
@@ -9,18 +9,18 @@
     - "{{ root_ca_key_file }}"
     register: root_ca_files_stat_result
 
-  - name: Controller Manager | Client Certificate | the required Root CA files must exist
+  - name: Kubernetes | Control Plane | Controller Manager | Client Certificate | the required Root CA files must exist
     assert:
       that: "{{ root_ca_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == root_ca_files_stat_result.results | length }}"
       fail_msg: "you need to generate the Root CA in {{ root_ca_dir }}"
 
-- name: Controller Manager | Client Certificate | create the work directories
+- name: Kubernetes | Control Plane | Controller Manager | Client Certificate | create the work directories
   file:
     path: "{{ pki_dir }}/controller_manager-client_cert"
     state: directory
     recurse: yes
 
-- name: Controller Manager | Client Certificate | build the signing configuration
+- name: Kubernetes | Control Plane | Controller Manager | Client Certificate | build the signing configuration
   copy:
     dest: "{{ pki_dir }}/controller_manager-client_cert/signing-config.json"
     content: |
@@ -39,7 +39,7 @@
       }
     mode: 0600
 
-- name: Controller Manager | Client Certificate | build the CSRs (Certificate Signing Requests)
+- name: Kubernetes | Control Plane | Controller Manager | Client Certificate | build the CSRs (Certificate Signing Requests)
   copy:
     dest: "{{ pki_dir }}/controller_manager-client_cert/csr.json"
     content: |
@@ -61,7 +61,7 @@
       }
     mode: 0600
 
-- name: Controller Manager | Client Certificate | generate
+- name: Kubernetes | Control Plane | Controller Manager | Client Certificate | generate
   shell: |
     pushd {{ pki_dir }}/controller_manager-client_cert ;
     cfssl gencert \
@@ -74,7 +74,7 @@
   args:
     executable: bash
 
-- name: Controller Manager | Client Certificate | cleanup
+- name: Kubernetes | Control Plane | Controller Manager | Client Certificate | cleanup
   file: 
     path: "{{ pki_dir }}/controller_manager-client_cert/{{ item }}"
     state: absent

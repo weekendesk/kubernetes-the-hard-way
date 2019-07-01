@@ -4,6 +4,7 @@ etcd3_version: v3.3.13
 
 # DO NOT CHANGE THINGS BELOW
 kubernetes_workers: "{{ groups['workers'] }}"
+kubernetes_masters: "{{ groups['masters'] }}"
 pki_dir: "{{ playbook_dir }}/pki"
 root_ca_dir: "{{ pki_dir }}/root-ca"
 root_ca_cert_file: "{{root_ca_dir}}/ca.pem"
