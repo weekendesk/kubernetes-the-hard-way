@@ -53,8 +53,8 @@ ansible-playbook kthw-playbook.yml -t download_kubernetes_control_plane -l maste
 ```
 - generate and distribute the certs:
 ```sh
-ansible-playbook kthw-playbook.yml -t generate_the_api_server_cert
-ansible-playbook kthw-playbook.yml -t distribute_certificates -l masters 
+ansible-playbook kthw-playbook.yml -t generate_api_server_certificate
+ansible-playbook kthw-playbook.yml -t distribute_api_server_certificate -l masters 
 ```
 
 # Kubernetes worker nodes
@@ -68,8 +68,8 @@ ansible-playbook kthw-playbook.yml -t download_kubernetes_worker_components -l w
 ```
 - generate and distribute the certs:
 ```sh
-ansible-playbook kthw-playbook.yml -t generate_the_kubelet_client_certs
-ansible-playbook kthw-playbook.yml -t distribute_certificates -l workers 
+ansible-playbook kthw-playbook.yml -t generate_kubelet_client_certificate
+ansible-playbook kthw-playbook.yml -t distribute_kubelet_client_certificate -l workers 
 ```
 
 

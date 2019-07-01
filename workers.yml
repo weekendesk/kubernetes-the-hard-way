@@ -1,0 +1,19 @@
+---
+
+- name: Kubernetes | Workers | Download worker components
+  become: yes
+  script: ./scripts/download_kubernetes_worker_components {{ kubernetes_version }}
+  args:
+    creates: /tmp/.download_kubernetes_worker_components
+  when: "'workers' in group_names"
+  tags:
+  - download_kubernetes_worker_components
+
+
+# Kubelet
+- name: Kubernetes | Workers | Kubelet
+  import_tasks: ./kubelet.yml
+
+# Kube proxy
+- name: Kubernetes | Workers | Kube-proxy 
+  import_tasks: ./kube-proxy.yml

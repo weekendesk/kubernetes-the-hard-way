@@ -1,0 +1,24 @@
+---
+
+- name: Kubernetes | Control Plane | Download control plane components
+  become: yes
+  script: ./scripts/download_kubernetes_control_plane {{ kubernetes_version }}
+  args:
+    creates: /tmp/.download_kubernetes_control_plane
+  when: "'masters' in group_names"
+  tags:
+  - download_kubernetes_control_plane
+
+
+- name: Kubernetes | Control Plane | Admin User 
+  import_tasks: ./admin-cert.yml
+  when: "'localhost' in group_names"
+  tags:
+  - generate_the_admin_cert
+
+- name: Kubernetes | Control Plane | API Server
+  import_tasks: ./api_server.yml
+
+- name: Kubernetes | Control Plane | Controller Manager
+  import_tasks: ./controller_manager.yml
+

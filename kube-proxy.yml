@@ -1,0 +1,140 @@
+---
+
+- name: Kubernetes | Workers | Kube-proxy | API authentication | Generate the client certificate
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_client_certificates
+  - generate_kube_proxy_client_certificate
+  block:
+  - name: Kube-proxy | Client Certificate | Require the Root CA to be accessible
+    block:
+    - name: Kube-proxy | Client Certificate | stat the required Root CA files
+      stat:
+        path: "{{ item }}"
+      with_items: 
+      - "{{ root_ca_cert_file }}"
+      - "{{ root_ca_key_file }}"
+      register: root_ca_files_stat_result
+
+    - name: Kube-proxy | Client Certificate | the required Root CA files must exist
+      assert:
+        that: "{{ root_ca_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == root_ca_files_stat_result.results | length }}"
+        fail_msg: "you need to generate the Root CA in {{ root_ca_dir }}"
+
+  - name: Kube-proxy | Client Certificate | create the work directories
+    file:
+      path: "{{ pki_dir }}/kube_proxy-client_cert"
+      state: directory
+      recurse: yes
+
+  - name: Kube-proxy | Client Certificate | build the signing configuration
+    copy:
+      dest: "{{ pki_dir }}/kube_proxy-client_cert/signing-config.json"
+      content: |
+        {
+          "signing": {
+            "default": {
+              "expiry": "8760h"
+            },
+            "profiles": {
+              "kubernetes": {
+                "usages": ["signing", "key encipherment", "server auth", "client auth"],
+                "expiry": "8760h"
+              }
+            }
+          }
+        }
+      mode: 0600
+
+  - name: Kube-proxy | Client Certificate | build the CSRs (Certificate Signing Requests)
+    copy:
+      dest: "{{ pki_dir }}/kube_proxy-client_cert/csr.json"
+      content: |
+        {
+          "CN": "system:kube-proxy",
+          "key": {
+            "algo": "rsa",
+            "size": 2048
+          },
+          "names": [
+            {
+              "C": "US",
+              "L": "Portland",
+              "O": "system:node-proxier",
+              "OU": "{{ kubernetes_cluster_name }}",
+              "ST": "Somewhere nice"
+            }
+          ]
+        }
+      mode: 0600
+
+  - name: Kube-proxy | Client Certificate | generate
+    shell: |
+      pushd {{ pki_dir }}/kube_proxy-client_cert ;
+      cfssl gencert \
+        -ca={{ root_ca_cert_file }} \
+        -ca-key={{ root_ca_key_file }} \
+        -config=signing-config.json \
+        -profile=kubernetes \
+        csr.json | cfssljson -bare kube-proxy
+      popd ;
+    args:
+      executable: bash
+
+  - name: Kube-proxy | Client Certificate | cleanup
+    file: 
+      path: "{{ pki_dir }}/kube_proxy-client_cert/{{ item }}"
+      state: absent
+    with_items: 
+    - signing-config.json
+    - csr.json
+    - kube-proxy.csr
+
+- name: Kubernetes | Workers | Kube-proxy | API authentication | Distribute the client certificate
+  copy:
+    src: "{{ item }}"
+    dest: "{{ ansible_env.HOME }}"
+    mode: 0400
+  with_items:
+  - "{{ root_ca_cert_file }}"
+  - "{{ pki_dir }}/kube_proxy-client_cert/kube-proxy.pem"
+  - "{{ pki_dir }}/kube_proxy-client_cert/kube-proxy-key.pem"
+  when: "'workers' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_client_certificates
+  - distribute_kube_proxy_client_certificate
+
+#- name: Kubernetes | Workers | Kube-proxy | API authentication | Configure
+#  when: "'workers' in group_names"
+#  tags:
+#  - configure_kube_proxy_access_to_the_api_server
+#  block: 
+#  - name: Kubernetes | Workers | Kube-proxy | API authentication | Configure api server location
+#    shell: >
+#      kubectl config set-cluster {{ kubernetes_cluster_id }} \
+#      --certificate-authority={{ ansible_env.HOME }}/ca.pem \
+#      --embed-certs=true \
+#      --server=https://{{ kubernetes_api_ip_address }}:6443 \
+#      --kubeconfig={{ ansible_env.HOME }}/kube-proxy.kubeconfig
+#
+#  - name: Kubernetes | Workers | Kube-proxy | API authentication | Configure user credentials
+#    shell: >
+#      kubectl config set-credentials kube-proxy \
+#        --client-certificate={{ ansible_env.HOME }}/kube-proxy.pem \
+#        --client-key={{ ansible_env.HOME }}/kube-proxy-key.pem \
+#        --embed-certs=true \
+#        --kubeconfig={{ ansible_env.HOME }}/kube-proxy.kubeconfig
+#
+#  - name: Kubernetes | Workers | Kube-proxy | API authentication | Configure default context
+#    shell: >
+#      kubectl config set-context default \
+#        --cluster={{ kubernetes_cluster_id }} \
+#        --user=kube-proxy \
+#        --kubeconfig={{ ansible_env.HOME }}/kube-proxy.kubeconfig
+#
+#  - name: Kubernetes | Workers | Kube-proxy | API authentication | Use default context
+#    shell: >
+#      kubectl config use-context default --kubeconfig={{ ansible_env.HOME }}/kube-proxy.kubeconfig
+

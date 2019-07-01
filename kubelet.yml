@@ -1,0 +1,144 @@
+---
+- name: Kubernetes | Workers | Kubelet | API authentication | Generate the client certificate
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_client_certificates
+  - generate_kubelet_client_certificate
+  block:
+  - name: Kubelet | Client Certificate | Require the Root CA to be accessible
+    block:
+    - name: Kubelet | Client Certificate | stat the required Root CA files
+      stat:
+        path: "{{ item }}"
+      with_items: 
+      - "{{ root_ca_cert_file }}"
+      - "{{ root_ca_key_file }}"
+      register: root_ca_files_stat_result
+
+    - name: Kubelet | Client Certificate | the required Root CA files must exist
+      assert:
+        that: "{{ root_ca_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == root_ca_files_stat_result.results | length }}"
+        fail_msg: "you need to generate the Root CA in {{ root_ca_dir }}"
+
+  - name: Kubelet | Client Certificate | create the work directories
+    file:
+      path: "{{ pki_dir }}/kubelet-client_certs/{{ item }}"
+      state: directory
+      recurse: yes
+    with_items: "{{ kubernetes_workers }}"
+
+  - name: Kubelet | Client Certificate | build the signing configuration
+    copy:
+      dest: "{{ pki_dir }}/kubelet-client_certs/signing-config.json"
+      content: |
+        {
+          "signing": {
+            "default": {
+              "expiry": "8760h"
+            },
+            "profiles": {
+              "kubernetes": {
+                "usages": ["signing", "key encipherment", "server auth", "client auth"],
+                "expiry": "8760h"
+              }
+            }
+          }
+        }
+      mode: 0600
+
+  - name: Kubelet | Client Certificate | build the CSRs (Certificate Signing Requests)
+    copy:
+      dest: "{{ pki_dir }}/kubelet-client_certs/{{ item }}/csr.json"
+      content: |
+        {
+          "CN": "system:node:{{ item }}",
+          "key": {
+            "algo": "rsa",
+            "size": 2048
+          },
+          "names": [
+            {
+              "C": "US",
+              "L": "Portland",
+              "O": "system:nodes",
+              "OU": "{{ kubernetes_cluster_name }}",
+              "ST": "Somewhere nice"
+            }
+          ]
+        }
+      mode: 0600
+    with_items: "{{ kubernetes_workers }}"
+
+  - name: Kubelet | Client Certificate | generate
+    shell: |
+      pushd {{ pki_dir }}/kubelet-client_certs/{{ item }} ;
+      cfssl gencert \
+        -ca={{ root_ca_cert_file }} \
+        -ca-key={{ root_ca_key_file }} \
+        -config=../signing-config.json \
+        -hostname={{ item }},{{ hostvars[item].ansible_all_ipv4_addresses | join(',') }} \
+        -profile=kubernetes \
+        csr.json | cfssljson -bare kubelet
+      popd ;
+    args:
+      executable: bash
+    with_items: "{{ kubernetes_workers }}"
+
+  - name: Kubelet | Client Certificate | cleanup
+    file: 
+      path: "{{ pki_dir }}/kubelet-client_certs/signing-config.json"
+      state: absent
+    
+  - name: Kubelet | Client Certificate | cleanup
+    file: 
+      path: "{{ pki_dir }}/kubelet-client_certs/{{ item }}"
+      state: absent
+    with_items: "{{ kubernetes_workers |  product(['csr.json', 'kubelet.csr']) | map('join', '/') | list }}"
+
+- name: Kubernetes | Workers | Kubelet | API authentication | Distribute the client certificate
+  copy:
+    src: "{{ item }}"
+    dest: "{{ ansible_env.HOME }}"
+    mode: 0400
+  with_items:
+  - "{{ root_ca_cert_file }}"
+  - "{{ pki_dir }}/kubelet-client_certs/{{ inventory_hostname }}/kubelet.pem"
+  - "{{ pki_dir }}/kubelet-client_certs/{{ inventory_hostname }}/kubelet-key.pem"
+  when: "'workers' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_client_certificates
+  - distribute_kubelet_client_certificate
+
+#- name: Kubernetes | Workers | Kubelet | API authentication | Configure
+#  when: "'workers' in group_names"
+#  tags:
+#  - configure_kubelet_access_to_the_api_server
+#  block: 
+#  - name: Kubernetes | Workers | Kubelet | API authentication | Configure api server location
+#    shell: >
+#      kubectl config set-cluster {{ kubernetes_cluster_id }} \
+#      --certificate-authority={{ ansible_env.HOME }}/ca.pem \
+#      --embed-certs=true \
+#      --server=https://{{ kubernetes_api_ip_address }}:6443 \
+#      --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+#
+#  - name: Kubernetes | Workers | Kubelet | API authentication | Configure user credentials
+#      shell: >
+#        kubectl config set-credentials system:node:{{ inventory_hostname }} \
+#          --client-certificate={{ ansible_env.HOME }}/kubelet.pem \
+#          --client-key={{ ansible_env.HOME }}/kubelet-key.pem \
+#          --embed-certs=true \
+#          --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+#
+#  - name: Kubernetes | Workers | Kubelet | API authentication | Configure default context
+#      shell: >
+#        kubectl config set-context default \
+#          --cluster={{ kubernetes_cluster_id }} \
+#          --user=system:node:{{ inventory_hostname }} \
+#          --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+#
+#  - name: Kubernetes | Workers | Kubelet | API authentication | Use default context
+#    shell: >
+#      kubectl config use-context default --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig

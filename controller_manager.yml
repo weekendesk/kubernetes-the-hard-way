@@ -1,0 +1,91 @@
+
+- name: Kubernetes | Control Plane | Controller Manager | API authentication | Generate the client certificate
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_client_certificates
+  - generate_kube_controller_manager_client_certificate
+  block:
+  - name: Kubernetes | Control Plane | Controller Manager | Client Certificate | Require the Root CA to be accessible
+    block:
+    - name: Kubernetes | Control Plane | Controller Manager | Client Certificate | stat the required Root CA files
+      stat:
+        path: "{{ item }}"
+      with_items: 
+      - "{{ root_ca_cert_file }}"
+      - "{{ root_ca_key_file }}"
+      register: root_ca_files_stat_result
+
+    - name: Kubernetes | Control Plane | Controller Manager | Client Certificate | the required Root CA files must exist
+      assert:
+        that: "{{ root_ca_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == root_ca_files_stat_result.results | length }}"
+        fail_msg: "you need to generate the Root CA in {{ root_ca_dir }}"
+
+  - name: Kubernetes | Control Plane | Controller Manager | Client Certificate | create the work directories
+    file:
+      path: "{{ pki_dir }}/controller_manager-client_cert"
+      state: directory
+      recurse: yes
+
+  - name: Kubernetes | Control Plane | Controller Manager | Client Certificate | build the signing configuration
+    copy:
+      dest: "{{ pki_dir }}/controller_manager-client_cert/signing-config.json"
+      content: |
+        {
+          "signing": {
+            "default": {
+              "expiry": "8760h"
+            },
+            "profiles": {
+              "kubernetes": {
+                "usages": ["signing", "key encipherment", "server auth", "client auth"],
+                "expiry": "8760h"
+              }
+            }
+          }
+        }
+      mode: 0600
+
+  - name: Kubernetes | Control Plane | Controller Manager | Client Certificate | build the CSRs (Certificate Signing Requests)
+    copy:
+      dest: "{{ pki_dir }}/controller_manager-client_cert/csr.json"
+      content: |
+        {
+          "CN": "system:kube-controller-manager",
+          "key": {
+            "algo": "rsa",
+            "size": 2048
+          },
+          "names": [
+            {
+              "C": "US",
+              "L": "Portland",
+              "O": "system:kube-controller-manager",
+              "OU": "{{ kubernetes_cluster_name }}",
+              "ST": "Somewhere nice"
+            }
+          ]
+        }
+      mode: 0600
+
+  - name: Kubernetes | Control Plane | Controller Manager | Client Certificate | generate
+    shell: |
+      pushd {{ pki_dir }}/controller_manager-client_cert ;
+      cfssl gencert \
+        -ca={{ root_ca_cert_file }} \
+        -ca-key={{ root_ca_key_file }} \
+        -config=signing-config.json \
+        -profile=kubernetes \
+        csr.json | cfssljson -bare kube-controller-manager
+      popd ;
+    args:
+      executable: bash
+
+  - name: Kubernetes | Control Plane | Controller Manager | Client Certificate | cleanup
+    file: 
+      path: "{{ pki_dir }}/controller_manager-client_cert/{{ item }}"
+      state: absent
+    with_items: 
+    - signing-config.json
+    - csr.json
+    - kube-controller-manager.csr

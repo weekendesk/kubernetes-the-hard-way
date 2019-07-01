@@ -14,12 +14,6 @@
     tags:
     - generate_the_root_ca
   
-  - name: Root CA
-    import_tasks: ./kube_proxy_client_cert.yml
-    when: "'localhost' in group_names"
-    tags:
-    - generate_the_kube_proxy_client_cert
-
   - name: Etcd
     import_tasks: ./etcd.yml
 
@@ -30,7 +24,7 @@
     - install_container_runtime
 
   - name: Setup the Kubernetes Control Plane
-    import_tasks: ./k8s_control_plane.yml
+    import_tasks: ./control_plane.yml
 
   - name: Setup the Kubernetes Workers
-    import_tasks: ./k8s_workers.yml
+    import_tasks: ./workers.yml
