@@ -73,3 +73,10 @@ ansible-playbook kthw-playbook.yml -t distribute_kubelet_client_certificate -l w
 ansible-playbook kthw-playbook.yml -t configure_kubelet_access_to_the_api_server -l workers 
 ```
 
+- generate, distribute, and use the kube-proxy client certs:
+```sh
+ansible-playbook kthw-playbook.yml -t generate_kube_proxy_client_certificate
+ansible-playbook kthw-playbook.yml -t distribute_kube_proxy_client_certificate -l workers
+ansible-playbook kthw-playbook.yml -t configure_kube_proxy_access_to_the_api_server -l workers
+```
+
