@@ -111,34 +111,35 @@
   - distribute_client_certificates
   - distribute_kubelet_client_certificate
 
-#- name: Kubernetes | Workers | Kubelet | API authentication | Configure
-#  when: "'workers' in group_names"
-#  tags:
-#  - configure_kubelet_access_to_the_api_server
-#  block: 
-#  - name: Kubernetes | Workers | Kubelet | API authentication | Configure api server location
-#    shell: >
-#      kubectl config set-cluster {{ kubernetes_cluster_id }} \
-#      --certificate-authority={{ ansible_env.HOME }}/ca.pem \
-#      --embed-certs=true \
-#      --server=https://{{ kubernetes_api_ip_address }}:6443 \
-#      --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
-#
-#  - name: Kubernetes | Workers | Kubelet | API authentication | Configure user credentials
-#      shell: >
-#        kubectl config set-credentials system:node:{{ inventory_hostname }} \
-#          --client-certificate={{ ansible_env.HOME }}/kubelet.pem \
-#          --client-key={{ ansible_env.HOME }}/kubelet-key.pem \
-#          --embed-certs=true \
-#          --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
-#
-#  - name: Kubernetes | Workers | Kubelet | API authentication | Configure default context
-#      shell: >
-#        kubectl config set-context default \
-#          --cluster={{ kubernetes_cluster_id }} \
-#          --user=system:node:{{ inventory_hostname }} \
-#          --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
-#
-#  - name: Kubernetes | Workers | Kubelet | API authentication | Use default context
-#    shell: >
-#      kubectl config use-context default --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+- name: Kubernetes | Workers | Kubelet | API authentication | Configure
+  when: "'workers' in group_names"
+  tags:
+  - configure_kubelet_access_to_the_api_server
+  block: 
+  - name: Kubernetes | Workers | Kubelet | API authentication | Configure api server location
+    shell: >
+      kubectl config set-cluster {{ kubernetes_cluster_id }} \
+      --certificate-authority={{ ansible_env.HOME }}/ca.pem \
+      --embed-certs=true \
+      --server=https://{{ kubernetes_api_ip_address }}:6443 \
+      --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+
+  - name: Kubernetes | Workers | Kubelet | API authentication | Configure user credentials
+    shell: >
+      kubectl config set-credentials system:node:{{ inventory_hostname }} \
+        --client-certificate={{ ansible_env.HOME }}/kubelet.pem \
+        --client-key={{ ansible_env.HOME }}/kubelet-key.pem \
+        --embed-certs=true \
+        --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+
+  - name: Kubernetes | Workers | Kubelet | API authentication | Configure default context
+    shell: >
+      kubectl config set-context default \
+        --cluster={{ kubernetes_cluster_id }} \
+        --user=system:node:{{ inventory_hostname }} \
+        --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+
+  - name: Kubernetes | Workers | Kubelet | API authentication | Use default context
+    shell: >
+      kubectl config use-context default --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+  

@@ -66,10 +66,10 @@ ansible-playbook kthw-playbook.yml -t install_container_runtime -l workers
 ```sh
 ansible-playbook kthw-playbook.yml -t download_kubernetes_worker_components -l workers
 ```
-- generate and distribute the certs:
+- generate, distribute, and use the kubelet client certs:
 ```sh
 ansible-playbook kthw-playbook.yml -t generate_kubelet_client_certificate
 ansible-playbook kthw-playbook.yml -t distribute_kubelet_client_certificate -l workers 
+ansible-playbook kthw-playbook.yml -t configure_kubelet_access_to_the_api_server -l workers 
 ```
-
 
