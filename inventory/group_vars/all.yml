@@ -1,6 +1,7 @@
 
 kubernetes_version: v1.15.0
 etcd3_version: v3.3.13
+etcd_data_encryption_key: s3cr3t
 kubernetes_cluster_id: kubernetes-the-hard-way
 kubernetes_cluster_name: Kubernetes The Hard Way
 

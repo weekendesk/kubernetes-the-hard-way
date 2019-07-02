@@ -42,6 +42,11 @@ vagrant up
 ansible-playbook kthw-playbook.yml -t download_etcd -l etcd_peers
 ```
 
+- configure secrets encryption in etcd
+```sh
+ansible-playbook kthw-playbook.yml -t download_etcd -l configure_etcd_secrets_encryption_at_rest
+```
+
 # Kubernetes Control Plane
 - setup a CRI-compatible container runtime 
 ```sh
