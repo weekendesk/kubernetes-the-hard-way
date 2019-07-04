@@ -9,6 +9,16 @@
   tags:
   - download_etcd
 
+- name: Etcd | Create data directory
+  when: "'etcd_peers' in group_names"
+  tags:
+  - download_etcd
+  become: yes
+  file:
+    dest: /var/lib/etcd
+    state: directory
+    recurse: yes
+
 - name: Etcd | Security | Encryption
   copy:
     dest: "{{ ansible_env.HOME }}/etcd-data-encryption-config.yaml"
@@ -27,3 +37,54 @@
   when: "'etcd_peers' in group_names"
   tags:
   - configure_etcd_secrets_encryption_at_rest
+
+- name: Etcd | Service | Create
+  when: "'etcd_peers' in group_names"
+  tags:
+  - start_etcd
+  become: yes
+  copy: 
+    dest: /etc/systemd/system/etcd.service
+    content: |
+      [Unit]
+        Description=etcd
+        Documentation=https://github.com/coreos
+
+      [Service]
+        Type=notify
+        ExecStart=/usr/bin/etcd \
+          --name "{{ ansible_hostname }}" \
+          --data-dir=/var/lib/etcd \
+          --initial-cluster-token "{{ kubernetes_cluster_id }}" \
+          --initial-cluster {{ etcd_peers | map('extract', hostvars, ['ansible_eth1', 'ipv4', 'address']) | list | map('regex_replace', '^(.*)$', 'https://\1:2380') | list | zip(etcd_peers) | list | map('reverse') | map('list') | map('join', '=') | list | join(',') }} \
+          --initial-cluster-state new \
+          --peer-client-cert-auth \
+          --peer-cert-file="{{ ansible_env.HOME }}/api-server.pem" \
+          --peer-key-file="{{ ansible_env.HOME }}/api-server-key.pem" \
+          --peer-trusted-ca-file="{{ ansible_env.HOME }}/ca.pem" \
+          --initial-advertise-peer-urls https://{{ etcd_cluster_ip_address }}:2380 \
+          --listen-peer-urls https://{{ etcd_cluster_ip_address }}:2380 \
+          --client-cert-auth \
+          --cert-file="{{ ansible_env.HOME }}/api-server.pem" \
+          --key-file="{{ ansible_env.HOME }}/api-server-key.pem" \
+          --trusted-ca-file="{{ ansible_env.HOME }}/ca.pem" \
+          --listen-client-urls https://{{ etcd_cluster_ip_address }}:2379,http://127.0.0.1:2379 \
+          --advertise-client-urls https://{{ etcd_cluster_ip_address }}:2379
+        Restart=on-failure
+        RestartSec=5
+
+      [Install]
+        WantedBy=multi-user.target
+
+- name: Etcd | Service | Start
+  when: "'etcd_peers' in group_names"
+  tags:
+  - start_etcd
+  become: yes
+  systemd:
+    name: etcd
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+

@@ -37,14 +37,10 @@ vagrant up
 ```
 
 # Etcd cluster
-- download etcd
 ```sh
 ansible-playbook kthw-playbook.yml -t download_etcd -l etcd_peers
-```
-
-- configure secrets encryption in etcd
-```sh
-ansible-playbook kthw-playbook.yml -t download_etcd -l configure_etcd_secrets_encryption_at_rest
+ansible-playbook kthw-playbook.yml -t configure_etcd_secrets_encryption_at_rest -l etcd_peers
+ansible-playbook kthw-playbook.yml -t start_etcd -l etcd_peers
 ```
 
 # Kubernetes Control Plane
