@@ -19,25 +19,6 @@
     state: directory
     recurse: yes
 
-- name: Etcd | Security | Encryption
-  copy:
-    dest: "{{ ansible_env.HOME }}/etcd-data-encryption-config.yaml"
-    content: |
-      kind: EncryptionConfig
-      apiVersion: v1
-      resources:
-        - resources:
-            - secrets
-          providers:
-            - aescbc:
-                keys:
-                  - name: key1
-                    secret: "{{ etcd_data_encryption_key }}"
-            - identity: {}
-  when: "'etcd_peers' in group_names"
-  tags:
-  - configure_etcd_secrets_encryption_at_rest
-
 - name: Etcd | Service | Create
   when: "'etcd_peers' in group_names"
   tags:

@@ -108,3 +108,84 @@
   - distribute_certificates
   - distribute_server_certificates
   - distribute_api_server_certificate
+
+
+
+- name: Kubernetes | Control Plane | API Server | Security | Encryption
+  copy:
+    dest: "{{ ansible_env.HOME }}/etcd-data-encryption-config.yaml"
+    content: |
+      kind: EncryptionConfig
+      apiVersion: v1
+      resources:
+        - resources:
+            - secrets
+          providers:
+            - aescbc:
+                keys:
+                  - name: key1
+                    secret: "{{ etcd_data_encryption_key | b64encode }}"
+            - identity: {}
+  when: "'masters' in group_names"
+  tags:
+  - configure_api_server_secrets_encryption
+
+- name: Kubernetes | Control Plane | API Server | Service | Create
+  when: "'masters' in group_names"
+  tags:
+  - start_api_server
+  become: yes
+  copy: 
+    dest: /etc/systemd/system/kube-apiserver.service
+    content: |
+      [Unit]
+        Description=Kubernetes API Server
+
+      [Service]
+        ExecStart=/usr/bin/kube-apiserver \
+          --admission-control=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
+          --advertise-address={{ ansible_eth1.ipv4.address }} \
+          --allow-privileged=true \
+          --apiserver-count=3 \
+          --audit-log-maxage=30 \
+          --audit-log-maxbackup=3 \
+          --audit-log-maxsize=100 \
+          --audit-log-path=/var/log/audit.log \
+          --authorization-mode=Node,RBAC \
+          --bind-address=0.0.0.0 \
+          --client-ca-file={{ ansible_env.HOME }}/api-server.pem \
+          --enable-swagger-ui=true \
+          --etcd-cafile={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
+          --etcd-certfile={{ ansible_env.HOME }}/api-server.pem \
+          --etcd-keyfile={{ ansible_env.HOME }}/api-server-key.pem \
+          --etcd-servers={{ etcd_peers | map('extract', hostvars, ['ansible_eth1', 'ipv4', 'address']) | list | map('regex_replace', '^(.*)$', 'https://\1:2379') | list | join(',') }} \
+          --event-ttl=1h \
+          --experimental-encryption-provider-config={{ ansible_env.HOME }}/etcd-data-encryption-config.yaml \
+          --insecure-bind-address=127.0.0.1 \
+          --kubelet-certificate-authority={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
+          --kubelet-client-certificate={{ ansible_env.HOME }}/api-server.pem  \
+          --kubelet-client-key={{ ansible_env.HOME }}/api-server-key.pem \
+          --kubelet-https=true \
+          --runtime-config=api/all \
+          --service-account-key-file={{ ansible_env.HOME }}/{{ root_ca_key_file | basename }} \
+          --service-cluster-ip-range=10.32.0.0/24 \
+          --service-node-port-range=30000-32767 \
+          --tls-cert-file={{ ansible_env.HOME }}/api-server.pem \
+          --tls-private-key-file={{ ansible_env.HOME }}/api-server-key.pem \
+          --v=2
+        Restart=on-failure
+        RestartSec=5
+
+      [Install]
+        WantedBy=multi-user.target
+
+- name: Kubernetes | Control Plane | API Server | Service | Start
+  when: "'masters' in group_names"
+  tags:
+  - start_api_server
+  become: yes
+  systemd:
+    name: kube-apiserver
+    enabled: yes
+    state: started
+    daemon_reload: yes

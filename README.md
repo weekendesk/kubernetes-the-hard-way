@@ -39,42 +39,33 @@ vagrant up
 # Etcd cluster
 ```sh
 ansible-playbook kthw-playbook.yml -t download_etcd -l etcd_peers
-ansible-playbook kthw-playbook.yml -t configure_etcd_secrets_encryption_at_rest -l etcd_peers
 ansible-playbook kthw-playbook.yml -t start_etcd -l etcd_peers
 ```
 
 # Kubernetes Control Plane
-- setup a CRI-compatible container runtime 
+## API Server
 ```sh
 ansible-playbook kthw-playbook.yml -t install_container_runtime -l masters
-```
-- download kubelet, kube-proxy, apiserver, scheduler and native controllers on the master nodes
-```sh
 ansible-playbook kthw-playbook.yml -t download_kubernetes_control_plane -l masters
-```
-- generate and distribute the certs:
-```sh
 ansible-playbook kthw-playbook.yml -t generate_api_server_certificate
-ansible-playbook kthw-playbook.yml -t distribute_api_server_certificate -l masters 
+ansible-playbook kthw-playbook.yml -t distribute_api_server_certificate -l masters
+ansible-playbook kthw-playbook.yml --extra-vars="etcd_data_encryption_key=$(head -c 32 /dev/urandom | base64)" -t configure_api_server_secrets_encryption -l masters 
+ansible-playbook kthw-playbook.yml -t start_api_server -l masters
 ```
 
+
 # Kubernetes worker nodes
-- setup a CRI-compatible container runtime 
+
+## Kubelet
 ```sh
 ansible-playbook kthw-playbook.yml -t install_container_runtime -l workers
-```
-- download kubelet & kube-proxy on the worker nodes
-```sh
 ansible-playbook kthw-playbook.yml -t download_kubernetes_worker_components -l workers
-```
-- generate, distribute, and use the kubelet client certs:
-```sh
 ansible-playbook kthw-playbook.yml -t generate_kubelet_client_certificate
 ansible-playbook kthw-playbook.yml -t distribute_kubelet_client_certificate -l workers 
 ansible-playbook kthw-playbook.yml -t configure_kubelet_access_to_the_api_server -l workers 
 ```
 
-- generate, distribute, and use the kube-proxy client certs:
+## Kube-proxy
 ```sh
 ansible-playbook kthw-playbook.yml -t generate_kube_proxy_client_certificate
 ansible-playbook kthw-playbook.yml -t distribute_kube_proxy_client_certificate -l workers
