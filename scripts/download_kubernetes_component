@@ -1,29 +1,17 @@
 #!/usr/bin/env bash
 K8S_COMPONENT=$1
 K8S_RELEASE_VERSION=$2
-HYPERKUBE_BINARY="/usr/bin/hyperkube_$K8S_RELEASE_VERSION"
 
-function wrap_hyperkube () {
-    local kube_component=$1
-    local component_version=$2
-    local component_runner="/usr/bin/${kube_component}_${component_version}"
-    sudo bash -c "echo \"#!/usr/bin/env bash\" > $component_runner"
-    sudo bash -c "echo \"$HYPERKUBE_BINARY $kube_component \\\$@\" >> $component_runner"
-    sudo chmod +x "$component_runner"
-    sudo ln -s $component_runner "/usr/bin/$kube_component"
-}
+tmpdir=$(mktemp -d)
 
-pushd /tmp
+pushd "${tmpdir}" &> /dev/null
 
-container_id=$(docker create gcr.io/google-containers/hyperkube:$K8S_RELEASE_VERSION)
+curl -sL "https://storage.googleapis.com/kubernetes-release/release/${K8S_RELEASE_VERSION}/bin/linux/amd64/${K8S_COMPONENT}" > "${K8S_COMPONENT}"
+sudo chmod +x "${K8S_COMPONENT}"
+sudo mv "${K8S_COMPONENT}" "/usr/bin/${K8S_COMPONENT}_${K8S_RELEASE_VERSION}"
+sudo ln -s "/usr/bin/${K8S_COMPONENT}_${K8S_RELEASE_VERSION}" "/usr/bin/${K8S_COMPONENT}"
 
-sudo docker cp $container_id:/hyperkube "$HYPERKUBE_BINARY"
-sudo chmod u+x "$HYPERKUBE_BINARY"
+popd &> /dev/null
 
-docker rm -f $container_id
-
-wrap_hyperkube "$K8S_COMPONENT" "$K8S_RELEASE_VERSION" 
-
-popd
-
+rm -rf "${tmpdir}"
 
