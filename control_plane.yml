@@ -38,3 +38,9 @@
 - name: Kubernetes | Control Plane | Scheduler
   import_tasks: ./scheduler.yml
 
+
+- name: Kubernetes | Control Plane | Admin User 
+  import_tasks: ./admin-user.yml
+  when: "'localhost' in group_names"
+  tags:
+  - generate_the_admin_user

@@ -18,11 +18,15 @@
       - curl
       state: present
   
-  - name: Root CA
-    import_tasks: ./root_ca.yml
+  - name: Root CA | generate 
     when: "'localhost' in group_names"
     tags:
-    - generate_the_root_ca
+      - generate_the_root_ca
+    import_role:
+      name: certificate-authority
+    vars:
+      certificate_CN: "Kubernetes"
+      certificate_authority_output_dir: "{{ root_ca_dir }}"
   
   - name: Etcd
     import_tasks: ./etcd.yml

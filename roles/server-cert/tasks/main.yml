@@ -49,18 +49,18 @@
     dest: "{{ server_cert_output_dir }}/csr.json"
     content: |
       {
-        "CN": "{{ server_cert_CN }}",
+        "CN": "{{ certificate_CN }}",
         "key": {
           "algo": "rsa",
           "size": 2048
         },
         "names": [
           {
-            "C":  "{{ server_cert_C }}",
-            "L":  "{{ server_cert_L }}",
-            "O":  "{{ server_cert_O }}",
-            "OU": "{{ server_cert_OU }}",
-            "ST": "{{ server_cert_ST }}"
+            "C":  "{{ certificate_C }}",
+            "L":  "{{ certificate_L }}",
+            "O":  "{{ certificate_O }}",
+            "OU": "{{ certificate_OU }}",
+            "ST": "{{ certificate_ST }}"
           }
         ]
       }

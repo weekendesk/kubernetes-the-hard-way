@@ -26,12 +26,12 @@
   - generate_etcd_cluster_auth_certificates
   - generate_etcd_cluster_auth_ca
   import_role:
-    name: subordinate-ca
+    name: certificate-authority
   vars:
-    subordinate_ca_CN: "etcd-cluster"
-    subordinate_ca_parent_ca_cert_file: "{{ root_ca_cert_file }}"
-    subordinate_ca_parent_ca_key_file: "{{ root_ca_key_file }}"
-    subordinate_ca_output_dir: "{{ pki_dir }}/etcd/cluster_auth/"
+    certificate_CN: "etcd-cluster"
+    certificate_authority_parent_ca_cert_file: "{{ root_ca_cert_file }}"
+    certificate_authority_parent_ca_key_file: "{{ root_ca_key_file }}"
+    certificate_authority_output_dir: "{{ pki_dir }}/etcd/cluster_auth/"
 
 - name: Etcd | Cluster Member Auth | Certificate Authority | distribute
   copy:
@@ -58,7 +58,7 @@
   import_role:
     name: server-cert
   vars:
-    server_cert_CN: "etcd-server"
+    certificate_CN: "etcd-server"
     server_cert_parent_ca_cert_file: "{{ pki_dir }}/etcd/cluster_auth/ca.pem"
     server_cert_parent_ca_key_file: "{{ pki_dir }}/etcd/cluster_auth/ca-key.pem"
     server_cert_output_dir: "{{ pki_dir }}/etcd/cluster_auth/"
@@ -88,12 +88,12 @@
   - generate_etcd_client_auth_certificates
   - generate_etcd_client_auth_ca
   import_role:
-    name: subordinate-ca
+    name: certificate-authority
   vars:
-    subordinate_ca_CN: "etcd-data"
-    subordinate_ca_parent_ca_cert_file: "{{ root_ca_cert_file }}"
-    subordinate_ca_parent_ca_key_file: "{{ root_ca_key_file }}"
-    subordinate_ca_output_dir: "{{ pki_dir }}/etcd/client_auth/"
+    certificate_CN: "etcd-data"
+    certificate_authority_parent_ca_cert_file: "{{ root_ca_cert_file }}"
+    certificate_authority_parent_ca_key_file: "{{ root_ca_key_file }}"
+    certificate_authority_output_dir: "{{ pki_dir }}/etcd/client_auth/"
 
 - name: Etcd | Client Auth | Certificate Authority | distribute
   copy:
@@ -118,7 +118,7 @@
   import_role:
     name: server-cert
   vars:
-    server_cert_CN: "etcd-data"
+    certificate_CN: "etcd-data-server"
     server_cert_parent_ca_cert_file: "{{ pki_dir }}/etcd/client_auth/ca.pem"
     server_cert_parent_ca_key_file: "{{ pki_dir }}/etcd/client_auth/ca-key.pem"
     server_cert_output_dir: "{{ pki_dir }}/etcd/client_auth/"

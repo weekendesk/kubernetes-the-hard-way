@@ -1,4 +1,15 @@
 ---
+- name: Kubernetes | Workers | Kubelet | Download
+  become: yes
+  script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+  with_items:
+  - kubelet
+  args:
+    creates: /usr/bin/{{ item }}
+  when: "'workers' in group_names"
+  tags:
+  - download_kubernetes_worker_components
+  - download_kubelet
 
 # we want to generate a client cert for every worker, so we need to loop over workers
 # However, import_task doesn't support loops 
@@ -15,8 +26,8 @@
   - include_role:
       name: client-cert
     vars:
-      client_cert_CN: system:node:{{ item }}
-      client_cert_O: system:nodes
+      certificate_CN: system:node:{{ item }}
+      certificate_O: system:nodes
       client_cert_server_name: api_server
       client_cert_parent_ca_cert_file: "{{ root_ca_cert_file }}"
       client_cert_parent_ca_key_file: "{{ root_ca_key_file }}"

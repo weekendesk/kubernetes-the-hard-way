@@ -106,6 +106,14 @@ ansible-playbook kthw-playbook.yml -t distribute_kube_scheduler_client_certifica
 ansible-playbook kthw-playbook.yml -t start_scheduler -l masters
 ```
 
+## Verification
+
+```sh
+ansible-playbook kthw-playbook.yml -t generate_the_admin_user
+
+kubectl version --kubeconfig pki/admin_user/admin.kubeconfig
+```
+
 # Kubernetes worker nodes
 
 ## Kubelet

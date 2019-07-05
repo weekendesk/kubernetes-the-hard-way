@@ -9,7 +9,7 @@
   import_role:
     name: client-cert
   vars:
-    client_cert_CN: api-server
+    certificate_CN: api-server
     client_cert_server_name: etcd_data
     client_cert_parent_ca_cert_file: "{{ pki_dir }}/etcd/client_auth/ca.pem"
     client_cert_parent_ca_key_file: "{{ pki_dir }}/etcd/client_auth/ca-key.pem"
@@ -53,7 +53,7 @@
   import_role:
     name: server-cert
   vars:
-    server_cert_CN: "kubernetes"
+    certificate_CN: "kubernetes"
     server_cert_parent_ca_cert_file: "{{ root_ca_cert_file }}"
     server_cert_parent_ca_key_file: "{{ root_ca_key_file }}"
     server_cert_output_dir: "{{ pki_dir }}/api_server"

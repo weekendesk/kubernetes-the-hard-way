@@ -4,6 +4,11 @@ etcd3_version: v3.3.13
 kubernetes_cluster_id: kubernetes-the-hard-way
 kubernetes_cluster_name: Kubernetes The Hard Way
 
+default_certificate_C: "US"
+default_certificate_L: "Portland"
+default_certificate_O: "{{ kubernetes_cluster_name }}"
+default_certificate_ST: "Somewhere nice"
+
 # DO NOT CHANGE THINGS BELOW
 kubernetes_workers: "{{ groups['workers'] | sort }}"
 kubernetes_masters: "{{ groups['masters'] | sort }}"
@@ -14,3 +19,5 @@ pki_dir: "{{ playbook_dir }}/pki"
 root_ca_dir: "{{ pki_dir }}/root-ca"
 root_ca_cert_file: "{{root_ca_dir}}/ca.pem"
 root_ca_key_file: "{{root_ca_dir}}/ca-key.pem"
+
+

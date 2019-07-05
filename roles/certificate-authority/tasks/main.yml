@@ -1,0 +1,101 @@
+
+- name: Certificate Authority | create the work directories
+  file:
+    path: "{{ certificate_authority_output_dir }}"
+    state: directory
+    recurse: yes
+
+- name: Certificate Authority | build the CSR
+  copy:
+    dest: "{{ certificate_authority_output_dir }}/csr.json"
+    content: |
+      {
+        "CN": "{{ certificate_CN }}",
+        "key": {
+          "algo": "rsa",
+          "size": 2048
+        },
+        "names": [
+          {
+            "C" : "{{ certificate_C }}",
+            "L" : "{{ certificate_L }}",
+            "O" : "{{ certificate_O }}",
+            "OU": "{{ certificate_OU }}",
+            "ST": "{{ certificate_ST }}"
+          }
+        ]
+      }
+    mode: 0600
+
+- name: Certificate Authority | generate
+  shell: |
+    pushd {{ certificate_authority_output_dir }} ;
+    cfssl gencert -initca csr.json | cfssljson -bare ca;
+    popd ;
+  args:
+      executable: bash
+
+- name: Certificate Authority | Sign
+  when: "certificate_authority_parent_ca_cert_file is defined and certificate_authority_parent_ca_key_file is defined"
+  block:
+  - name: Certificate Authority | Sign | stat the required Parent CA files
+    stat:
+      path: "{{ item }}"
+    with_items: 
+    - "{{ certificate_authority_parent_ca_cert_file }}"
+    - "{{ certificate_authority_parent_ca_key_file }}"
+    register: certificate_authority_parent_ca_stat_result
+
+  - name: Certificate Authority | Sign | Build the signing configuration
+    copy:
+      dest: "{{ certificate_authority_output_dir }}/signing-config.json"
+      content: |
+        {
+          "signing": {
+            "default": {
+              "expiry": "8760h"
+              "ca_constraint": {
+                "is_ca": true,
+                "max_path_len": 0,
+                "max_path_len_zero": true
+              },
+            },
+            "profiles": {
+              "ca": {
+                "usages": [
+                  "digital signature",
+                  "cert sign",
+                  "crl sign",
+                  "signing"
+                ],
+                "expiry": "8760h"
+              }
+            }
+          }
+        }
+      mode: 0600
+  - name: Certificate Authority | Sign | The required Signing CA files must exist
+    assert:
+      that: "{{ certificate_authority_parent_ca_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == certificate_authority_parent_ca_stat_result.results | length }}"
+      fail_msg: "Parent CA cert {{ certificate_authority_parent_ca_cert_file }} and key {{ certificate_authority_parent_ca_key_file }} are required"
+  - shell: |
+      pushd {{ certificate_authority_output_dir }} ;
+      cfssl sign \
+        -ca {{ certificate_authority_parent_ca_cert_file }} \
+        -ca-key {{ certificate_authority_parent_ca_key_file }} \
+        -config signing-config.json \
+        -profile=ca \
+        csr.json | cfssljson -bare ca
+      popd ;
+    args:
+        executable: bash
+    
+
+- name: Certificate Authority | cleanup
+  file: 
+    path: "{{ certificate_authority_output_dir }}/{{ item }}"
+    state: absent
+  with_items: 
+  - signing-config.json
+  - csr.json
+  - ca.csr

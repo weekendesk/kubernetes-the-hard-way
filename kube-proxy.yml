@@ -1,5 +1,18 @@
 ---
 
+
+- name: Kubernetes | Workers | Kube-proxy | Download
+  become: yes
+  script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+  with_items:
+  - kube-proxy
+  args:
+    creates: /usr/bin/{{ item }}
+  when: "'workers' in group_names"
+  tags:
+  - download_kubernetes_worker_components
+  - download_kube_proxy
+
 - name: Kubernetes | Workers | Kube-proxy | API Authentication | Client Certificate
   when: "'localhost' in group_names"
   tags:
@@ -9,22 +22,22 @@
   import_role:
     name: client-cert
   vars:
-    client_cert_CN: system:kube-proxy
-    client_cert_O: system:node-proxier
+    certificate_CN: system:kube-proxy
+    certificate_O: system:node-proxier
     client_cert_server_name: api_server
     client_cert_parent_ca_cert_file: "{{ root_ca_cert_file }}"
     client_cert_parent_ca_key_file: "{{ root_ca_key_file }}"
-    client_cert_output_dir: "{{ pki_dir }}/kube-proxy/"
+    client_cert_output_dir: "{{ pki_dir }}/kube_proxy/"
 
-- name: Kubernetes | Workers | Kube-proxy | API authentication | Distribute the client certificate
+- name: Kubernetes | Workers | Kube-proxy  | API authentication | Client Certificate | distribute
   copy:
-    src: "{{ item }}"
-    dest: "{{ ansible_env.HOME }}"
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
     mode: 0400
   with_items:
-  - "{{ root_ca_cert_file }}"
-  - "{{ pki_dir }}/kube_proxy-client_cert/kube-proxy.pem"
-  - "{{ pki_dir }}/kube_proxy-client_cert/kube-proxy-key.pem"
+  - { src: "{{ root_ca_cert_file }}" }
+  - { src: "{{ pki_dir }}/kube_proxy/api_server-client.pem", dest_filename: "kube_proxy-api_server-client.pem" }
+  - { src: "{{ pki_dir }}/kube_proxy/api_server-client-key.pem", dest_filename: "kube_proxy-api_server-client-key.pem" }
   when: "'workers' in group_names"
   tags:
   - distribute_certificates
@@ -47,8 +60,8 @@
   - name: Kubernetes | Workers | Kube-proxy | API authentication | Configure user credentials
     shell: >
       kubectl config set-credentials kube-proxy \
-        --client-certificate={{ ansible_env.HOME }}/kube-proxy.pem \
-        --client-key={{ ansible_env.HOME }}/kube-proxy-key.pem \
+        --client-certificate={{ ansible_env.HOME }}/kube_proxy-api_server-client.pem \
+        --client-key={{ ansible_env.HOME }}/kube_proxy-api_server-client-key.pem \
         --embed-certs=true \
         --kubeconfig={{ ansible_env.HOME }}/kube-proxy.kubeconfig
 

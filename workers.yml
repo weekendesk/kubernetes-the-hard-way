@@ -1,17 +1,5 @@
 ---
 
-- name: Kubernetes | Workers | Download worker components
-  become: yes
-  script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
-  with_items:
-  - kubectl
-  - kubelet
-  args:
-    creates: /usr/bin/{{ item }}
-  when: "'workers' in group_names"
-  tags:
-  - download_kubernetes_worker_components
-
 # Kubelet
 - name: Kubernetes | Workers | Kubelet
   import_tasks: ./kubelet.yml
