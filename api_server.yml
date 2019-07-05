@@ -1,4 +1,17 @@
 
+
+- name: Kubernetes | Control Plane | API Server | Download
+  become: yes
+  script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+  with_items:
+  - kube-apiserver
+  args:
+    creates: /usr/bin/{{ item }}
+  when: "'masters' in group_names"
+  tags:
+  - download_kubernetes_control_plane
+  - download_api_server
+
 - name: Kubernetes | Control Plane | API Server | Generate the server certificate
   when: "'localhost' in group_names"
   tags:

@@ -1,4 +1,17 @@
 
+
+- name: Kubernetes | Control Plane | Controller Manager | Download
+  become: yes
+  script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+  with_items:
+  - kube-controller-manager
+  args:
+    creates: /usr/bin/{{ item }}
+  when: "'masters' in group_names"
+  tags:
+  - download_kubernetes_control_plane
+  - download_controller_manager
+
 - name: Kubernetes | Control Plane | Controller Manager | API authentication | Generate the client certificate
   when: "'localhost' in group_names"
   tags:

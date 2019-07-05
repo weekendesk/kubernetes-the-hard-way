@@ -1,21 +1,20 @@
 ---
-
-- name: Kubernetes | Control Plane | Download control plane components
-  become: yes
-  script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
-  with_items:
-  - cloud-controller-manager
-  - kube-apiserver
-  - kube-controller-manager
-  - kube-proxy
-  - kube-scheduler
-  - kubectl
-  - kubelet
-  args:
-    creates: /usr/bin/{{ item }}
-  when: "'masters' in group_names"
-  tags:
-  - download_kubernetes_control_plane
+#- name: Kubernetes | Control Plane | Download control plane components
+#  become: yes
+#  script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+#  with_items:
+#  - cloud-controller-manager
+#  - kube-apiserver
+#  - kube-controller-manager
+#  - kube-proxy
+#  - kube-scheduler
+#  - kubectl
+#  - kubelet
+#  args:
+#    creates: /usr/bin/{{ item }}
+#  when: "'masters' in group_names"
+#  tags:
+#  - download_kubernetes_control_plane
 
 
 - name: Kubernetes | Control Plane | Admin User 

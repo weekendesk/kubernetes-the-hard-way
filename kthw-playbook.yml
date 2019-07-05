@@ -7,6 +7,16 @@
     when: "'localhost' in group_names"
     tags:
     - check_prerequisites
+
+  - name: Install required packages
+    become: yes
+    when: "'localhost' not in group_names"
+    tags:
+    - always
+    apt:
+      name: 
+      - curl
+      state: present
   
   - name: Root CA
     import_tasks: ./root_ca.yml

@@ -4,7 +4,7 @@
   become: yes
   script: ./scripts/download_etcd {{ etcd3_version }}
   args:
-    creates: /tmp/.download_etcd
+    creates: /usr/bin/etcd
   when: "'etcd_peers' in group_names"
   tags:
   - download_etcd
