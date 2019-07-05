@@ -23,7 +23,7 @@
     name: client-cert
   vars:
     client_cert_CN: "system:kube-controller-manager"
-    client_cert_OU: "{{ client_cert_CN }}"
+    client_cert_O: "{{ client_cert_CN }}"
     client_cert_server_name: "api_server"
     client_cert_parent_ca_cert_file: "{{ root_ca_cert_file }}"
     client_cert_parent_ca_key_file: "{{ root_ca_key_file }}"
@@ -36,8 +36,8 @@
     mode: 0400
   with_items:
   - { src: "{{ root_ca_cert_file }}" }
-  - { src: "{{ pki_dir }}/controller_manager/api_server-client.pem", dest_filename: "controller_manager.pem" }
-  - { src: "{{ pki_dir }}/controller_manager/api_server-client-key.pem", dest_filename: "controller_manager-key.pem" }
+  - { src: "{{ pki_dir }}/controller_manager/api_server-client.pem", dest_filename: "controller_manager-api_server-client.pem" }
+  - { src: "{{ pki_dir }}/controller_manager/api_server-client-key.pem", dest_filename: "controller_manager-api_server-client-key.pem" }
   when: "'masters' in group_names"
   tags:
   - distribute_certificates
@@ -71,8 +71,8 @@
   - name: Kubernetes | Control Plane | Controller Manager | API authentication | Configure user credentials
     shell: >
       kubectl config set-credentials system:node:{{ inventory_hostname }} \
-        --client-certificate={{ ansible_env.HOME }}/controller_manager.pem \
-        --client-key={{ ansible_env.HOME }}/controller_manager-key.pem \
+        --client-certificate={{ ansible_env.HOME }}/controller_manager-api_server-client.pem \
+        --client-key={{ ansible_env.HOME }}/controller_manager-api_server-client-key.pem \
         --embed-certs=true \
         --kubeconfig={{ ansible_env.HOME }}/controller_manager.kubeconfig
 

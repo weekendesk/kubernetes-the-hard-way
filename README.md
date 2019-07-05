@@ -85,8 +85,8 @@ ansible-playbook kthw-playbook.yml -t download_controller_manager -l masters
 ```
 
 ```sh
-ansible-playbook kthw-playbook.yml -t generate_controller_manager_certificate
-ansible-playbook kthw-playbook.yml -t distribute_controller_manager_certificate -l masters
+ansible-playbook kthw-playbook.yml -t generate_kube_controller_manager_client_certificate
+ansible-playbook kthw-playbook.yml -t distribute_kube_controller_manager_client_certificate -l masters
 ```
 
 ```sh
@@ -95,6 +95,14 @@ ansible-playbook kthw-playbook.yml -t start_controller_manager -l masters
 ## Scheduler
 ```sh
 ansible-playbook kthw-playbook.yml -t download_scheduler -l masters
+```
+
+```sh
+ansible-playbook kthw-playbook.yml -t generate_kube_scheduler_client_certificate
+ansible-playbook kthw-playbook.yml -t distribute_kube_scheduler_client_certificate -l masters
+```
+
+```sh
 ansible-playbook kthw-playbook.yml -t start_scheduler -l masters
 ```
 
