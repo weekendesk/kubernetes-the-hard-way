@@ -1,0 +1,47 @@
+
+
+- name: Kubernetes | Control Plane | Scheduler | Download
+  become: yes
+  script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+  with_items:
+  - kube-scheduler
+  args:
+    creates: /usr/bin/{{ item }}
+  when: "'masters' in group_names"
+  tags:
+  - download_kubernetes_control_plane
+  - download_scheduler
+
+- name: Kubernetes | Control Plane | Scheduler | Service | Create
+  when: "'masters' in group_names"
+  tags:
+  - start_scheduler
+  become: yes
+  copy: 
+    dest: /etc/systemd/system/kube-scheduler.service
+    content: |
+      [Unit]
+      Description=Kubernetes Scheduler
+      Documentation=https://github.com/kubernetes/kubernetes
+
+      [Service]
+      ExecStart=/usr/bin/kube-scheduler \\
+        --leader-elect=true \\
+        --master=http://127.0.0.1:8080 \\
+        --v=2
+      Restart=on-failure
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Kubernetes | Control Plane | Scheduler | Service | Start
+  when: "'masters' in group_names"
+  tags:
+  - start_scheduler
+  become: yes
+  systemd:
+    name: kube-scheduler
+    enabled: yes
+    state: started
+    daemon_reload: yes

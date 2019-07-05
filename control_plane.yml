@@ -29,4 +29,6 @@
 - name: Kubernetes | Control Plane | Controller Manager
   import_tasks: ./controller_manager.yml
 
+- name: Kubernetes | Control Plane | Scheduler
+  import_tasks: ./scheduler.yml
 
