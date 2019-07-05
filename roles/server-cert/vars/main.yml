@@ -1,0 +1,11 @@
+# server_cert_CN: ""
+server_cert_C: "US"
+server_cert_L: "Portland"
+server_cert_O: "Kubernetes"
+server_cert_OU: "{{ kubernetes_cluster_name }}"
+server_cert_ST: "Somewhere nice"
+
+# server_cert_parent_ca_cert_file: ""
+# server_cert_parent_ca_key_file: ""
+# server_cert_output_dir: ""
+# server_cert_hostnames: []

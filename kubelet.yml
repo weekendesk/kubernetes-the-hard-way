@@ -1,110 +1,38 @@
 ---
-- name: Kubernetes | Workers | Kubelet | API authentication | Generate the client certificate
+
+# we want to generate a client cert for every worker
+# so we need to loop over workers
+# therefore, we can't use import task.
+# Also, include_role does not support tags
+# so we need to wrap it in a block
+- name: Kubernetes | Workers | Kubelet | API Authentication | Client Certificate
   when: "'localhost' in group_names"
   tags:
   - generate_certificates
   - generate_client_certificates
   - generate_kubelet_client_certificate
   block:
-  - name: Kubelet | Client Certificate | Require the Root CA to be accessible
-    block:
-    - name: Kubelet | Client Certificate | stat the required Root CA files
-      stat:
-        path: "{{ item }}"
-      with_items: 
-      - "{{ root_ca_cert_file }}"
-      - "{{ root_ca_key_file }}"
-      register: root_ca_files_stat_result
-
-    - name: Kubelet | Client Certificate | the required Root CA files must exist
-      assert:
-        that: "{{ root_ca_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == root_ca_files_stat_result.results | length }}"
-        fail_msg: "you need to generate the Root CA in {{ root_ca_dir }}"
-
-  - name: Kubelet | Client Certificate | create the work directories
-    file:
-      path: "{{ pki_dir }}/kubelet-client_certs/{{ item }}"
-      state: directory
-      recurse: yes
+  - include_role:
+      name: client-cert
+    vars:
+      client_cert_CN: system:node:{{ item }}
+      client_cert_O: system:nodes
+      client_cert_server_name: api_server
+      client_cert_parent_ca_cert_file: "{{ root_ca_cert_file }}"
+      client_cert_parent_ca_key_file: "{{ root_ca_key_file }}"
+      client_cert_output_dir: "{{ pki_dir }}/kubelet/{{ item }}"
+      client_cert_hostnames: "{{ hostvars[item].ansible_all_ipv4_addresses | union([ item ]) }}"
     with_items: "{{ kubernetes_workers }}"
-
-  - name: Kubelet | Client Certificate | build the signing configuration
-    copy:
-      dest: "{{ pki_dir }}/kubelet-client_certs/signing-config.json"
-      content: |
-        {
-          "signing": {
-            "default": {
-              "expiry": "8760h"
-            },
-            "profiles": {
-              "kubernetes": {
-                "usages": ["signing", "key encipherment", "server auth", "client auth"],
-                "expiry": "8760h"
-              }
-            }
-          }
-        }
-      mode: 0600
-
-  - name: Kubelet | Client Certificate | build the CSRs (Certificate Signing Requests)
-    copy:
-      dest: "{{ pki_dir }}/kubelet-client_certs/{{ item }}/csr.json"
-      content: |
-        {
-          "CN": "system:node:{{ item }}",
-          "key": {
-            "algo": "rsa",
-            "size": 2048
-          },
-          "names": [
-            {
-              "C": "US",
-              "L": "Portland",
-              "O": "system:nodes",
-              "OU": "{{ kubernetes_cluster_name }}",
-              "ST": "Somewhere nice"
-            }
-          ]
-        }
-      mode: 0600
-    with_items: "{{ kubernetes_workers }}"
-
-  - name: Kubelet | Client Certificate | generate
-    shell: |
-      pushd {{ pki_dir }}/kubelet-client_certs/{{ item }} ;
-      cfssl gencert \
-        -ca={{ root_ca_cert_file }} \
-        -ca-key={{ root_ca_key_file }} \
-        -config=../signing-config.json \
-        -hostname={{ item }},{{ hostvars[item].ansible_all_ipv4_addresses | join(',') }} \
-        -profile=kubernetes \
-        csr.json | cfssljson -bare kubelet
-      popd ;
-    args:
-      executable: bash
-    with_items: "{{ kubernetes_workers }}"
-
-  - name: Kubelet | Client Certificate | cleanup
-    file: 
-      path: "{{ pki_dir }}/kubelet-client_certs/signing-config.json"
-      state: absent
-    
-  - name: Kubelet | Client Certificate | cleanup
-    file: 
-      path: "{{ pki_dir }}/kubelet-client_certs/{{ item }}"
-      state: absent
-    with_items: "{{ kubernetes_workers |  product(['csr.json', 'kubelet.csr']) | map('join', '/') | list }}"
-
+  
 - name: Kubernetes | Workers | Kubelet | API authentication | Distribute the client certificate
   copy:
-    src: "{{ item }}"
-    dest: "{{ ansible_env.HOME }}"
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
     mode: 0400
   with_items:
-  - "{{ root_ca_cert_file }}"
-  - "{{ pki_dir }}/kubelet-client_certs/{{ inventory_hostname }}/kubelet.pem"
-  - "{{ pki_dir }}/kubelet-client_certs/{{ inventory_hostname }}/kubelet-key.pem"
+  - { src: "{{ root_ca_cert_file }}" }
+  - { src: "{{ pki_dir }}/kubelet/{{ inventory_hostname }}/api_server-client.pem", dest_filename: "kubelet.pem" }
+  - { src: "{{ pki_dir }}/kubelet/{{ inventory_hostname }}/api_server-client-key.pem", dest_filename: "kubelet-key.pem" }
   when: "'workers' in group_names"
   tags:
   - distribute_certificates

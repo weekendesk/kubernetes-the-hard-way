@@ -1,0 +1,93 @@
+- name: Subordinate Certificate Authority | Require the Parent CA to be accessible
+  block:
+  - name: Subordinate Certificate Authority | stat the required Parent CA files
+    stat:
+      path: "{{ item }}"
+    with_items: 
+    - "{{ subordinate_ca_parent_ca_cert_file }}"
+    - "{{ subordinate_ca_parent_ca_key_file }}"
+    register: subordinate_ca_parent_ca_stat_result
+
+  - name: Subordinate Certificate Authority | the required Parent CA files must exist
+    assert:
+      that: "{{ subordinate_ca_parent_ca_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == subordinate_ca_parent_ca_stat_result.results | length }}"
+      fail_msg: "Parent CA cert {{ subordinate_ca_parent_ca_cert_file }} and key {{ subordinate_ca_parent_ca_key_file }} are required"
+
+- name: Subordinate Certificate Authority | create the work directories
+  file:
+    path: "{{ subordinate_ca_output_dir }}"
+    state: directory
+    recurse: yes
+
+- name: Subordinate Certificate Authority | build the signing configuration
+  copy:
+    dest: "{{ subordinate_ca_output_dir }}/signing-config.json"
+    content: |
+      {
+        "signing": {
+          "default": {
+            "expiry": "8760h"
+            "ca_constraint": {
+              "is_ca": true,
+              "max_path_len": 0,
+              "max_path_len_zero": true
+            },
+          },
+          "profiles": {
+            "subordinate": {
+              "usages": [
+                "digital signature",
+                "cert sign",
+                "crl sign",
+                "signing"
+              ],
+              "expiry": "8760h"
+            }
+          }
+        }
+      }
+    mode: 0600
+
+- name: Subordinate Certificate Authority | build the CSR
+  copy:
+    dest: "{{ subordinate_ca_output_dir }}/csr.json"
+    content: |
+      {
+        "CN": "{{ subordinate_ca_CN }}",
+        "key": {
+          "algo": "rsa",
+          "size": 2048
+        },
+        "names": [
+          {
+            "C": "US",
+            "L": "Portland",
+            "O": "Kubernetes",
+            "OU": "CA",
+            "ST": "Somewhere nice"
+          }
+        ]
+      }
+    mode: 0600
+
+- name: Subordinate Certificate Authority | generate
+  shell: |
+    pushd {{ subordinate_ca_output_dir }} ;
+    cfssl gencert -initca csr.json | cfssljson -bare ca;
+    cfssl sign \
+      -ca {{ subordinate_ca_parent_ca_cert_file }} \
+      -ca-key {{ subordinate_ca_parent_ca_key_file }} \
+      -config signing-config.json \
+      csr.json | cfssljson -bare ca
+    popd ;
+  args:
+      executable: bash
+
+- name: Subordinate Certificate Authority | cleanup
+  file: 
+    path: "{{ subordinate_ca_output_dir }}/{{ item }}"
+    state: absent
+  with_items: 
+  - signing-config.json
+  - csr.json
+  - ca.csr

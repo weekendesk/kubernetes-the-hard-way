@@ -1,0 +1,11 @@
+# client_cert_CN: ""
+client_cert_C: "US"
+client_cert_L: "Portland"
+client_cert_O: "Kubernetes"
+client_cert_OU: "{{ kubernetes_cluster_name }}"
+client_cert_ST: "Somewhere nice"
+# client_cert_server_name: "server"
+# client_cert_parent_ca_cert_file: ""
+# client_cert_parent_ca_key_file: ""
+# client_cert_output_dir: ""
+client_cert_hostnames: []

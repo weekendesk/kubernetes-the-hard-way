@@ -15,7 +15,7 @@ It should be able to get you to a working single master (insecure) kubernetes se
 
 You can run the following command to check if you've missed something (don't worry, it won't install anything on your machine)
 ```sh
-ansible-playbook kthw-playbook.yml -t check_prerequisites
+ansible-playbook kthw-playbook.yml -t check_prerequisites -l localhost
 ```
 
 
@@ -27,7 +27,7 @@ We need certificates to :
 
 To create these certificates, we'll need a root Certificate Authority, that can be self signed by running !
 ```sh
-ansible-playbook kthw-playbook.yml -t generate_the_root_ca
+ansible-playbook kthw-playbook.yml -t generate_the_root_ca -l localhost
 ```
 
 # Infrastructure
@@ -46,13 +46,25 @@ ansible-playbook kthw-playbook.yml -t start_etcd -l etcd_peers
 ## API Server
 ```sh
 ansible-playbook kthw-playbook.yml -t install_container_runtime -l masters
-ansible-playbook kthw-playbook.yml -t download_kubernetes_control_plane -l masters
+ansible-playbook kthw-playbook.yml -t download_api_server -l masters
 ansible-playbook kthw-playbook.yml -t generate_api_server_certificate
 ansible-playbook kthw-playbook.yml -t distribute_api_server_certificate -l masters
-ansible-playbook kthw-playbook.yml --extra-vars="etcd_data_encryption_key=$(head -c 32 /dev/urandom | base64)" -t configure_api_server_secrets_encryption -l masters 
+ansible-playbook kthw-playbook.yml --extra-vars="secrets_encryption_key=$(head -c 32 /dev/urandom)" -t configure_api_server_secrets_encryption -l masters 
 ansible-playbook kthw-playbook.yml -t start_api_server -l masters
 ```
+## Controller Manager
+```sh
+ansible-playbook kthw-playbook.yml -t download_controller_manager -l masters
+ansible-playbook kthw-playbook.yml -t generate_controller_manager_certificate
+ansible-playbook kthw-playbook.yml -t distribute_controller_manager_certificate -l masters
+ansible-playbook kthw-playbook.yml -t start_controller_manager -l masters
 
+```
+## Scheduler
+```sh
+ansible-playbook kthw-playbook.yml -t download_scheduler -l masters
+ansible-playbook kthw-playbook.yml -t start_scheduler -l masters
+```
 
 # Kubernetes worker nodes
 
