@@ -39,26 +39,58 @@ vagrant up
 # Etcd cluster
 ```sh
 ansible-playbook kthw-playbook.yml -t download_etcd -l etcd_peers
+```
+
+```sh
+ansible-playbook kthw-playbook.yml -t generate_etcd_cluster_auth_certificates
+ansible-playbook kthw-playbook.yml -t distribute_etcd_cluster_auth_certificates
+```
+
+```sh
+ansible-playbook kthw-playbook.yml -t generate_etcd_client_auth_certificates
+ansible-playbook kthw-playbook.yml -t distribute_etcd_client_auth_certificates
+```
+
+```sh
 ansible-playbook kthw-playbook.yml -t start_etcd -l etcd_peers
 ```
 
 # Kubernetes Control Plane
 ## API Server
 ```sh
-ansible-playbook kthw-playbook.yml -t install_container_runtime -l masters
 ansible-playbook kthw-playbook.yml -t download_api_server -l masters
+```
+
+```sh
+ansible-playbook kthw-playbook.yml -t generate_api_server_client_certificate_for_etcd_data
+ansible-playbook kthw-playbook.yml -t distribute_api_server_client_certificate_for_etcd_data
+```
+
+```sh
 ansible-playbook kthw-playbook.yml -t generate_api_server_certificate
 ansible-playbook kthw-playbook.yml -t distribute_api_server_certificate -l masters
-ansible-playbook kthw-playbook.yml --extra-vars="secrets_encryption_key=$(head -c 32 /dev/urandom)" -t configure_api_server_secrets_encryption -l masters 
+```
+
+```sh
+encryption_key_for_secrets=$(head -c 32 /dev/urandom | base64)
+ansible-playbook kthw-playbook.yml --extra-vars="secrets_encryption_key='$encryption_key_for_secrets'" -t configure_api_server_secrets_encryption -l masters 
+```
+
+```sh
 ansible-playbook kthw-playbook.yml -t start_api_server -l masters
 ```
 ## Controller Manager
 ```sh
 ansible-playbook kthw-playbook.yml -t download_controller_manager -l masters
+```
+
+```sh
 ansible-playbook kthw-playbook.yml -t generate_controller_manager_certificate
 ansible-playbook kthw-playbook.yml -t distribute_controller_manager_certificate -l masters
-ansible-playbook kthw-playbook.yml -t start_controller_manager -l masters
+```
 
+```sh
+ansible-playbook kthw-playbook.yml -t start_controller_manager -l masters
 ```
 ## Scheduler
 ```sh
@@ -72,8 +104,14 @@ ansible-playbook kthw-playbook.yml -t start_scheduler -l masters
 ```sh
 ansible-playbook kthw-playbook.yml -t install_container_runtime -l workers
 ansible-playbook kthw-playbook.yml -t download_kubernetes_worker_components -l workers
+```
+
+```sh
 ansible-playbook kthw-playbook.yml -t generate_kubelet_client_certificate
 ansible-playbook kthw-playbook.yml -t distribute_kubelet_client_certificate -l workers 
+```
+
+```sh
 ansible-playbook kthw-playbook.yml -t configure_kubelet_access_to_the_api_server -l workers 
 ```
 
@@ -81,6 +119,9 @@ ansible-playbook kthw-playbook.yml -t configure_kubelet_access_to_the_api_server
 ```sh
 ansible-playbook kthw-playbook.yml -t generate_kube_proxy_client_certificate
 ansible-playbook kthw-playbook.yml -t distribute_kube_proxy_client_certificate -l workers
+```
+
+```sh
 ansible-playbook kthw-playbook.yml -t configure_kube_proxy_access_to_the_api_server -l workers
 ```
 

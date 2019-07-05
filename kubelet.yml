@@ -1,8 +1,8 @@
 ---
 
-# we want to generate a client cert for every worker
-# so we need to loop over workers
-# therefore, we can't use import task.
+# we want to generate a client cert for every worker, so we need to loop over workers
+# However, import_task doesn't support loops 
+# we can't use it.
 # Also, include_role does not support tags
 # so we need to wrap it in a block
 - name: Kubernetes | Workers | Kubelet | API Authentication | Client Certificate
@@ -42,6 +42,9 @@
 - name: Kubernetes | Workers | Kubelet | API authentication | Configure
   when: "'workers' in group_names"
   tags:
+  - distribute_certificates
+  - distribute_client_certificates
+  - distribute_kubelet_client_certificate
   - configure_kubelet_access_to_the_api_server
   block: 
   - name: Kubernetes | Workers | Kubelet | API authentication | Configure api server location
@@ -71,3 +74,9 @@
     shell: >
       kubectl config use-context default --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
   
+
+- name: Install a CRI-compatible container runtime
+  import_tasks: ./container_runtime.yml
+  when: "'workers' in group_names"
+  tags:
+  - install_container_runtime

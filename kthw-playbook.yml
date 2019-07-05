@@ -27,12 +27,6 @@
   - name: Etcd
     import_tasks: ./etcd.yml
 
-  - name: Install a CRI-compatible container runtime
-    import_tasks: ./container_runtime.yml
-    when: "'k8s_nodes' in group_names"
-    tags:
-    - install_container_runtime
-
   - name: Setup the Kubernetes Control Plane
     import_tasks: ./control_plane.yml
 

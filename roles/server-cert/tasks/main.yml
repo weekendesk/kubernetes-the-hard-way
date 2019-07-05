@@ -44,7 +44,7 @@
       }
     mode: 0600
 
-- name: Server Certificate | build the CSRs (Certificate Signing Requests)
+- name: Server Certificate | build the CSR
   copy:
     dest: "{{ server_cert_output_dir }}/csr.json"
     content: |

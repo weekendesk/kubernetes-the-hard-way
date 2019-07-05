@@ -13,7 +13,7 @@
   - download_controller_manager
 
 
-- name: Kubernetes | Control Plane | API Server | Server Certificate 
+- name: Kubernetes | Control Plane | Controller Manager | API authentication | Client Certificate | generate
   when: "'localhost' in group_names"
   tags:
   - generate_certificates
@@ -29,7 +29,67 @@
     client_cert_parent_ca_key_file: "{{ root_ca_key_file }}"
     client_cert_output_dir: "{{ pki_dir }}/controller_manager"
 
+- name: Kubernetes | Control Plane | Controller Manager | API authentication | Client Certificate | distribute
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
+    mode: 0400
+  with_items:
+  - { src: "{{ root_ca_cert_file }}" }
+  - { src: "{{ pki_dir }}/controller_manager/api_server-client.pem", dest_filename: "controller_manager.pem" }
+  - { src: "{{ pki_dir }}/controller_manager/api_server-client-key.pem", dest_filename: "controller_manager-key.pem" }
+  when: "'masters' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_client_certificates
+  - distribute_kube_controller_manager_client_certificate
 
+
+- name: Kubernetes | Control Plane | Controller Manager | API authentication | Configure
+  when: "'masters' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_client_certificates
+  - distribute_kube_controller_manager_client_certificate
+  block: 
+  - name: Kubernetes | Control Plane | Controller Manager | API authentication | Download kubectl
+    become: yes
+    script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+    with_items:
+    - kubectl
+    args:
+      creates: /usr/bin/{{ item }}
+
+  - name: Kubernetes | Control Plane | Controller Manager | API authentication | Configure api server location
+    shell: >
+      kubectl config set-cluster {{ kubernetes_cluster_id }} \
+      --certificate-authority={{ ansible_env.HOME }}/ca.pem \
+      --embed-certs=true \
+      --server=https://{{ kubernetes_api_ip_address }}:6443 \
+      --kubeconfig={{ ansible_env.HOME }}/controller_manager.kubeconfig
+
+  - name: Kubernetes | Control Plane | Controller Manager | API authentication | Configure user credentials
+    shell: >
+      kubectl config set-credentials system:node:{{ inventory_hostname }} \
+        --client-certificate={{ ansible_env.HOME }}/controller_manager.pem \
+        --client-key={{ ansible_env.HOME }}/controller_manager-key.pem \
+        --embed-certs=true \
+        --kubeconfig={{ ansible_env.HOME }}/controller_manager.kubeconfig
+
+  - name: Kubernetes | Control Plane | Controller Manager | API authentication | Configure default context
+    shell: >
+      kubectl config set-context default \
+        --cluster={{ kubernetes_cluster_id }} \
+        --user=system:node:{{ inventory_hostname }} \
+        --kubeconfig={{ ansible_env.HOME }}/controller_manager.kubeconfig
+
+  - name: Kubernetes | Control Plane | Controller Manager | API authentication | Use default context
+    shell: >
+      kubectl config use-context default --kubeconfig={{ ansible_env.HOME }}/controller_manager.kubeconfig
+  
+
+# TODO --authentication-kubeconfig={{ ansible_env.HOME }}/controller_manager.kubeconfig \
+# TODO --authorization-kubeconfig={{ ansible_env.HOME }}/controller_manager.kubeconfig \
 - name: Kubernetes | Control Plane | Controller Manager | Service | Create
   when: "'masters' in group_names"
   tags:
@@ -44,9 +104,10 @@
 
       [Service]
       ExecStart=/usr/bin/kube-controller-manager \
-        --address=0.0.0.0 \
+        --bind-address=0.0.0.0 \
         --cluster-cidr=10.200.0.0/16 \
         --cluster-name=kubernetes \
+        --use-service-account-credentials \
         --cluster-signing-cert-file={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
         --cluster-signing-key-file={{ ansible_env.HOME }}/{{ root_ca_key_file | basename }} \
         --leader-elect=true \

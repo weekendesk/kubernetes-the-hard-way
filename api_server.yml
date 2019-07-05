@@ -1,5 +1,37 @@
 
 
+- name: Kubernetes | Control Plane | API Server | Etcd Authentication | Client Certificate | generate
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_client_certificates
+  - generate_api_server_client_certificate_for_etcd_data
+  import_role:
+    name: client-cert
+  vars:
+    client_cert_CN: api-server
+    client_cert_server_name: etcd_data
+    client_cert_parent_ca_cert_file: "{{ pki_dir }}/etcd/client_auth/ca.pem"
+    client_cert_parent_ca_key_file: "{{ pki_dir }}/etcd/client_auth/ca-key.pem"
+    client_cert_output_dir: "{{ pki_dir }}/api_server"
+  
+
+- name: Kubernetes | Control Plane | API Server | Etcd Authentication | Client Certificate | distribute
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
+    mode: 0400
+  with_items:
+  - { src: "{{ pki_dir }}/etcd/client_auth/ca.pem", dest_filename: "etcd_data-ca.pem" }
+  - { src: "{{ pki_dir }}/api_server/etcd_data-client.pem", dest_filename: "api_server-etcd_data-client.pem" }
+  - { src: "{{ pki_dir }}/api_server/etcd_data-client-key.pem", dest_filename: "api_server-etcd_data-client-key.pem" }
+  when: "'masters' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_client_certificates
+  - distribute_api_server_client_certificate_for_etcd_data
+
+
 - name: Kubernetes | Control Plane | API Server | Download
   become: yes
   script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
@@ -57,7 +89,7 @@
             - aescbc:
                 keys:
                   - name: key1
-                    secret: "{{ secrets_encryption_key | b64encode }}"
+                    secret: "{{ secrets_encryption_key }}"
             - identity: {}
   when: "'masters' in group_names"
   tags:
@@ -88,9 +120,9 @@
           --bind-address=0.0.0.0 \
           --client-ca-file={{ ansible_env.HOME }}/api-server.pem \
           --enable-swagger-ui=true \
-          --etcd-cafile={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
-          --etcd-certfile={{ ansible_env.HOME }}/api-server.pem \
-          --etcd-keyfile={{ ansible_env.HOME }}/api-server-key.pem \
+          --etcd-cafile={{ ansible_env.HOME }}/etcd_data-ca.pem \
+          --etcd-certfile={{ ansible_env.HOME }}/api_server-etcd_data-client.pem \
+          --etcd-keyfile={{ ansible_env.HOME }}/api_server-etcd_data-client-key.pem \
           --etcd-servers={{ etcd_peers | map('extract', hostvars, ['ansible_eth1', 'ipv4', 'address']) | list | map('regex_replace', '^(.*)$', 'https://\1:2379') | list | join(',') }} \
           --event-ttl=1h \
           --experimental-encryption-provider-config={{ ansible_env.HOME }}/etcd-data-encryption-config.yaml \

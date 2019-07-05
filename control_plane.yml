@@ -17,11 +17,17 @@
 #  - download_kubernetes_control_plane
 
 
-- name: Kubernetes | Control Plane | Admin User 
-  import_tasks: ./admin-cert.yml
-  when: "'localhost' in group_names"
-  tags:
-  - generate_the_admin_cert
+#- name: Install a CRI-compatible container runtime
+#  import_tasks: ./container_runtime.yml
+#  when: "'masters' in group_names"
+#  tags:
+#  - install_container_runtime
+
+#- name: Kubernetes | Control Plane | Admin User 
+#  import_tasks: ./admin-cert.yml
+#  when: "'localhost' in group_names"
+#  tags:
+#  - generate_the_admin_cert
 
 - name: Kubernetes | Control Plane | API Server
   import_tasks: ./api_server.yml
