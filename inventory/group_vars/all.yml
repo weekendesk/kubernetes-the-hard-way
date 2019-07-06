@@ -1,5 +1,5 @@
 
-kubernetes_version: v1.15.0
+kubernetes_version: v1.12.0
 etcd3_version: v3.3.13
 kubernetes_cluster_id: kubernetes-the-hard-way
 kubernetes_cluster_name: Kubernetes The Hard Way
@@ -7,6 +7,7 @@ kubernetes_cluster_name: Kubernetes The Hard Way
 default_certificate_C: "US"
 default_certificate_L: "Portland"
 default_certificate_O: "{{ kubernetes_cluster_name }}"
+default_certificate_OU: "{{ kubernetes_cluster_name }}"
 default_certificate_ST: "Somewhere nice"
 
 # DO NOT CHANGE THINGS BELOW

@@ -49,6 +49,14 @@
   tags:
   - configure_kube_proxy_access_to_the_api_server
   block: 
+  - name: Kubernetes | Workers | Kube-proxy | API authentication | Download kubectl
+    become: yes
+    script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+    with_items:
+    - kubectl
+    args:
+      creates: /usr/bin/{{ item }}
+
   - name: Kubernetes | Workers | Kube-proxy | API authentication | Configure api server location
     shell: >
       kubectl config set-cluster {{ kubernetes_cluster_id }} \

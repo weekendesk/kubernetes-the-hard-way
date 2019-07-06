@@ -32,6 +32,32 @@
   - distribute_api_server_client_certificate_for_etcd_data
 
 
+- name: Kubernetes | Control Plane | API Server | Service Account Authority | generate
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_service_account_ca
+  import_role:
+    name: certificate-authority
+  vars:
+    certificate_CN: "service-accounts"
+    certificate_authority_parent_ca_cert_file: "{{ root_ca_cert_file }}"
+    certificate_authority_parent_ca_key_file: "{{ root_ca_key_file }}"
+    certificate_authority_output_dir: "{{ pki_dir }}/service_accounts/"
+
+- name: Kubernetes | Control Plane | API Server | Service Account Authority | distribute
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
+    mode: 0400
+  with_items:
+  - { src: "{{ pki_dir }}/service_accounts/ca.pem", dest_filename: "service_accounts-ca.pem" }
+  - { src: "{{ pki_dir }}/service_accounts/ca-key.pem", dest_filename: "service_accounts-ca-key.pem" }
+  when: "'masters' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_service_account_ca
+
 - name: Kubernetes | Control Plane | API Server | Download
   become: yes
   script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
@@ -108,17 +134,17 @@
 
       [Service]
         ExecStart=/usr/bin/kube-apiserver \
-          --admission-control=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
           --advertise-address={{ ansible_eth1.ipv4.address }} \
           --allow-privileged=true \
-          --apiserver-count=3 \
+          --apiserver-count=1 \
           --audit-log-maxage=30 \
           --audit-log-maxbackup=3 \
           --audit-log-maxsize=100 \
           --audit-log-path=/var/log/audit.log \
           --authorization-mode=Node,RBAC \
           --bind-address=0.0.0.0 \
-          --client-ca-file={{ ansible_env.HOME }}/api-server.pem \
+          --client-ca-file={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
+          --enable-admission-plugins=Initializers,NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
           --enable-swagger-ui=true \
           --etcd-cafile={{ ansible_env.HOME }}/etcd_data-ca.pem \
           --etcd-certfile={{ ansible_env.HOME }}/api_server-etcd_data-client.pem \
@@ -126,13 +152,12 @@
           --etcd-servers={{ etcd_peers | map('extract', hostvars, ['ansible_eth1', 'ipv4', 'address']) | list | map('regex_replace', '^(.*)$', 'https://\1:2379') | list | join(',') }} \
           --event-ttl=1h \
           --experimental-encryption-provider-config={{ ansible_env.HOME }}/etcd-data-encryption-config.yaml \
-          --insecure-bind-address=127.0.0.1 \
           --kubelet-certificate-authority={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
           --kubelet-client-certificate={{ ansible_env.HOME }}/api-server.pem  \
           --kubelet-client-key={{ ansible_env.HOME }}/api-server-key.pem \
           --kubelet-https=true \
           --runtime-config=api/all \
-          --service-account-key-file={{ ansible_env.HOME }}/{{ root_ca_key_file | basename }} \
+          --service-account-key-file={{ ansible_env.HOME }}/service_accounts-ca.pem \
           --service-cluster-ip-range=10.32.0.0/24 \
           --service-node-port-range=30000-32767 \
           --tls-cert-file={{ ansible_env.HOME }}/api-server.pem \

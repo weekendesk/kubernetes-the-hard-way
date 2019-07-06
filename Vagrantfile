@@ -5,9 +5,7 @@ require 'open-uri'
 Vagrant.require_version ">= 2.2.4"
 
 hosts = {
-  masters: [
-    "master-node"
-  ],
+  masters: [1].map { |i| "master-node-#{i}" },
   workers: (1..2).map { |i| "worker-node-#{i}" }
 }
 
@@ -38,10 +36,6 @@ Vagrant.configure("2") do |config|
         inventory.puts node_name
       end
   
-    inventory.puts "[k8s_nodes]"
-    all_hosts.each do |node_name|
-      inventory.puts node_name
-    end
   end
 
   # provision the vms

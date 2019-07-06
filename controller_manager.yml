@@ -88,8 +88,6 @@
       kubectl config use-context default --kubeconfig={{ ansible_env.HOME }}/controller_manager.kubeconfig
   
 
-# TODO --authentication-kubeconfig={{ ansible_env.HOME }}/controller_manager.kubeconfig \
-# TODO --authorization-kubeconfig={{ ansible_env.HOME }}/controller_manager.kubeconfig \
 - name: Kubernetes | Control Plane | Controller Manager | Service | Create
   when: "'masters' in group_names"
   tags:
@@ -106,15 +104,15 @@
       ExecStart=/usr/bin/kube-controller-manager \
         --bind-address=0.0.0.0 \
         --cluster-cidr=10.200.0.0/16 \
-        --cluster-name=kubernetes \
-        --use-service-account-credentials \
+        --cluster-name={{ kubernetes_cluster_id }} \
         --cluster-signing-cert-file={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
         --cluster-signing-key-file={{ ansible_env.HOME }}/{{ root_ca_key_file | basename }} \
+        --kubeconfig={{ ansible_env.HOME }}/controller_manager.kubeconfig \
         --leader-elect=true \
-        --master=http://127.0.0.1:8080 \
         --root-ca-file={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
-        --service-account-private-key-file={{ ansible_env.HOME }}/{{ root_ca_key_file | basename }} \
+        --service-account-private-key-file={{ ansible_env.HOME }}/service_accounts-ca-key.pem \
         --service-cluster-ip-range=10.32.0.0/24 \
+        --use-service-account-credentials=true \
         --v=2
       Restart=on-failure
       RestartSec=5

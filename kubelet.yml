@@ -58,6 +58,14 @@
   - distribute_kubelet_client_certificate
   - configure_kubelet_access_to_the_api_server
   block: 
+  - name: Kubernetes | Workers | Kubelet | API authentication | Download kubectl
+    become: yes
+    script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+    with_items:
+    - kubectl
+    args:
+      creates: /usr/bin/{{ item }}
+
   - name: Kubernetes | Workers | Kubelet | API authentication | Configure api server location
     shell: >
       kubectl config set-cluster {{ kubernetes_cluster_id }} \

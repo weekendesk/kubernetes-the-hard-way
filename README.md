@@ -70,6 +70,10 @@ ansible-playbook kthw-playbook.yml -t distribute_api_server_client_certificate_f
 ansible-playbook kthw-playbook.yml -t generate_api_server_certificate
 ansible-playbook kthw-playbook.yml -t distribute_api_server_certificate -l masters
 ```
+```sh
+ansible-playbook kthw-playbook.yml -t generate_service_account_ca
+ansible-playbook kthw-playbook.yml -t distribute_service_account_ca -l masters
+```
 
 ```sh
 encryption_key_for_secrets=$(head -c 32 /dev/urandom | base64)
@@ -79,6 +83,15 @@ ansible-playbook kthw-playbook.yml --extra-vars="secrets_encryption_key='$encryp
 ```sh
 ansible-playbook kthw-playbook.yml -t start_api_server -l masters
 ```
+
+### Verification
+
+```sh
+ansible-playbook kthw-playbook.yml -t generate_the_admin_user
+
+kubectl version --kubeconfig pki/admin_user/admin.kubeconfig
+```
+
 ## Controller Manager
 ```sh
 ansible-playbook kthw-playbook.yml -t download_controller_manager -l masters
@@ -104,14 +117,6 @@ ansible-playbook kthw-playbook.yml -t distribute_kube_scheduler_client_certifica
 
 ```sh
 ansible-playbook kthw-playbook.yml -t start_scheduler -l masters
-```
-
-## Verification
-
-```sh
-ansible-playbook kthw-playbook.yml -t generate_the_admin_user
-
-kubectl version --kubeconfig pki/admin_user/admin.kubeconfig
 ```
 
 # Kubernetes worker nodes

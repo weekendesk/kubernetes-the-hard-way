@@ -1,19 +1,24 @@
 @startuml
-database etcd [
-  etcd 
-]
+
+package "etcd" {
+  database etcd [
+    etcd 
+  ]
+
+  [etcd] --> etcd : clustering
+}
 
 package "master-node" {
   [api-server] -> etcd
 
-  [kubelet] --> [api-server] : watch
-  [kubelet] --> [container-runtime] : run & watch
-  
+  [controller-manager] --> [api-server] : watch
+  [controller-manager] --> [api-server] : apply
+
   [scheduler] --> [api-server] : watch
   [scheduler] --> [api-server] : apply
 
-  [controller-manager] --> [api-server] : watch
-  [controller-manager] --> [api-server] : apply
+  [kubelet] --> [api-server] : watch
+  [kubelet] --> [container-runtime] : run & watch
 }
 
 package "worker-node-1" {
