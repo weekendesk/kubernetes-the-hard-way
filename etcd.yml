@@ -48,7 +48,6 @@
   - distribute_etcd_cluster_auth_ca
 
 
-
 - name: Etcd | Cluster Member Auth | Server Certificate | generate
   when: "'localhost' in group_names"
   tags:
@@ -189,3 +188,4 @@
     daemon_reload: yes
 
 
+- import_tasks: ./etcd_test_client.yml
