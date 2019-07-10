@@ -121,6 +121,37 @@
   tags:
   - configure_api_server_secrets_encryption
 
+- name: Kubernetes | Control Plane | API Server | Kubelet access | Configure
+  when: "'localhost' in group_names"
+  tags: configure_api_server_access_to_the_kubelets
+  block:
+  - name: Kubernetes | Control Plane | API Server | Kubelet access | Require the admin user cert
+    block:
+    - name: Kubernetes | Control Plane | API Server | Kubelet access | Require the admin user cert | Stat the files
+      stat:
+        path: "{{ file_that_should_exist }}"
+      with_items: 
+      - "{{ pki_dir }}/admin_user/admin.kubeconfig"
+      loop_control:
+        loop_var: file_that_should_exist
+      register: admin_user_cert_files_stat_result
+
+    - name: Kubernetes | Control Plane | API Server | Kubelet access | Require the admin user cert | The files must exist
+      assert:
+        that: "{{ admin_user_cert_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == admin_user_cert_files_stat_result.results | length }}"
+        fail_msg: "Admin user cert {{ client_cert_parent_ca_cert_file }} and key {{ client_cert_parent_ca_key_file }} are required"
+
+    - name: Kubernetes | Control Plane | API Server | Kubelet access | Require the admin user cert | Download kubectl
+      shell: "scripts/download_kubernetes_component kubectl '{{ kubernetes_version }}' {{playbook_dir}}"
+      args:
+        creates: "{{playbook_dir}}/kubectl"
+
+    - name: Kubernetes | Control Plane | API Server | Kubelet access | Create ClusterRole
+      shell: "{{playbook_dir}}/kubectl apply --kubeconfig '{{ pki_dir }}/admin_user/admin.kubeconfig' -f {{playbook_dir}}/apiserver-to-kubelet.clusterrole.yaml"
+
+    - name: Kubernetes | Control Plane | API Server | Kubelet access | Create ClusterRoleBinding
+      shell: "{{playbook_dir}}/kubectl apply --kubeconfig '{{ pki_dir }}/admin_user/admin.kubeconfig' -f {{playbook_dir}}/apiserver-to-kubelet.clusterrolebinding.yaml"
+
 - name: Kubernetes | Control Plane | API Server | Service | Create
   when: "'masters' in group_names"
   tags:
@@ -158,7 +189,7 @@
           --kubelet-https=true \
           --runtime-config=api/all \
           --service-account-key-file={{ ansible_env.HOME }}/service_accounts-ca.pem \
-          --service-cluster-ip-range=10.32.0.0/24 \
+          --service-cluster-ip-range={{ services_cidr }} \
           --service-node-port-range=30000-32767 \
           --tls-cert-file={{ ansible_env.HOME }}/api-server.pem \
           --tls-private-key-file={{ ansible_env.HOME }}/api-server-key.pem \

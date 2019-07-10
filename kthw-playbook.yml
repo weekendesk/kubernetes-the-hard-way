@@ -2,6 +2,12 @@
 - hosts: all
   gather_facts: yes
   tasks:
+  - set_fact:
+      pod_cidr: "{{ cluster_cidr | ipsubnet(24, ansible_play_batch.index(ansible_hostname) + 1) }}"
+    tags: 
+    - always
+    when: "'localhost' not in group_names"
+    
   - name: Assert that local prerequisites are met
     import_tasks: ./check_local_prerequisites.yml
     when: "'localhost' in group_names"

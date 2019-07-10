@@ -4,6 +4,9 @@ etcd3_version: v3.3.13
 kubernetes_cluster_id: kubernetes-the-hard-way
 kubernetes_cluster_name: Kubernetes The Hard Way
 
+cluster_cidr: 10.200.0.0/16
+services_cidr: 10.32.0.0/24
+
 default_certificate_C: "US"
 default_certificate_L: "Portland"
 default_certificate_O: "{{ kubernetes_cluster_name }}"
@@ -14,11 +17,11 @@ default_certificate_ST: "Somewhere nice"
 kubernetes_workers: "{{ groups['workers'] | sort }}"
 kubernetes_masters: "{{ groups['masters'] | sort }}"
 etcd_peers: "{{ groups['etcd_peers'] | sort }}"
+dns_server_service_ip_address: "{{ services_cidr | next_nth_usable(10) }}"
 kubernetes_api_ip_address: "{{ kubernetes_masters | map('extract', hostvars, ['ansible_eth1', 'ipv4', 'address']) | list | first }}"
 etcd_cluster_ip_address: "{{ etcd_peers | map('extract', hostvars, ['ansible_eth1', 'ipv4', 'address']) | list | first }}"
 pki_dir: "{{ playbook_dir }}/pki"
 root_ca_dir: "{{ pki_dir }}/root-ca"
 root_ca_cert_file: "{{root_ca_dir}}/ca.pem"
 root_ca_key_file: "{{root_ca_dir}}/ca-key.pem"
-
 

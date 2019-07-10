@@ -3,4 +3,4 @@ inventory/generated
 *.retry
 
 pki/
-kubectl
+kubectl*

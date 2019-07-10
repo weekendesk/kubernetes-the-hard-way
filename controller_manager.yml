@@ -103,7 +103,7 @@
       [Service]
       ExecStart=/usr/bin/kube-controller-manager \
         --bind-address=0.0.0.0 \
-        --cluster-cidr=10.200.0.0/16 \
+        --cluster-cidr={{ cluster_cidr }} \
         --cluster-name={{ kubernetes_cluster_id }} \
         --cluster-signing-cert-file={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
         --cluster-signing-key-file={{ ansible_env.HOME }}/{{ root_ca_key_file | basename }} \
@@ -111,7 +111,7 @@
         --leader-elect=true \
         --root-ca-file={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
         --service-account-private-key-file={{ ansible_env.HOME }}/service_accounts-ca-key.pem \
-        --service-cluster-ip-range=10.32.0.0/24 \
+        --service-cluster-ip-range={{ services_cidr }} \
         --use-service-account-credentials=true \
         --v=2
       Restart=on-failure

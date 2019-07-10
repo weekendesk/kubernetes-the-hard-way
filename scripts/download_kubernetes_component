@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 K8S_COMPONENT=$1
 K8S_RELEASE_VERSION=$2
+DESTINATION_DIR=${3:-/usr/bin}
 
 tmpdir=$(mktemp -d)
 
@@ -8,8 +9,8 @@ pushd "${tmpdir}" &> /dev/null
 
 curl -sL "https://storage.googleapis.com/kubernetes-release/release/${K8S_RELEASE_VERSION}/bin/linux/amd64/${K8S_COMPONENT}" > "${K8S_COMPONENT}"
 sudo chmod +x "${K8S_COMPONENT}"
-sudo mv "${K8S_COMPONENT}" "/usr/bin/${K8S_COMPONENT}_${K8S_RELEASE_VERSION}"
-sudo ln -s "/usr/bin/${K8S_COMPONENT}_${K8S_RELEASE_VERSION}" "/usr/bin/${K8S_COMPONENT}"
+sudo mv "${K8S_COMPONENT}" "${DESTINATION_DIR}/${K8S_COMPONENT}_${K8S_RELEASE_VERSION}"
+sudo ln -s "${DESTINATION_DIR}/${K8S_COMPONENT}_${K8S_RELEASE_VERSION}" "${DESTINATION_DIR}/${K8S_COMPONENT}"
 
 popd &> /dev/null
 

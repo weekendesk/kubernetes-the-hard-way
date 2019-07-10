@@ -21,21 +21,18 @@ Vagrant.configure("2") do |config|
   # complete the ansible inventory with groups
   config.trigger.before :up do |trigger|
     inventory = File.open("./inventory/generated", "w")
-    all_hosts = []
 
     hosts.keys.each do |group_name| 
       inventory.puts "[#{group_name}]"
       hosts[group_name].each do |node_name|
         inventory.puts node_name
-        all_hosts << node_name
       end
     end
 
     inventory.puts "[etcd_peers]"
     hosts[:masters].each do |node_name|
-        inventory.puts node_name
-      end
-  
+      inventory.puts node_name
+    end  
   end
 
   # provision the vms

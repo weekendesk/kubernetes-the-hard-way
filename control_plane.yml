@@ -1,33 +1,4 @@
 ---
-#- name: Kubernetes | Control Plane | Download control plane components
-#  become: yes
-#  script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
-#  with_items:
-#  - cloud-controller-manager
-#  - kube-apiserver
-#  - kube-controller-manager
-#  - kube-proxy
-#  - kube-scheduler
-#  - kubectl
-#  - kubelet
-#  args:
-#    creates: /usr/bin/{{ item }}
-#  when: "'masters' in group_names"
-#  tags:
-#  - download_kubernetes_control_plane
-
-
-#- name: Install a CRI-compatible container runtime
-#  import_tasks: ./container_runtime.yml
-#  when: "'masters' in group_names"
-#  tags:
-#  - install_container_runtime
-
-#- name: Kubernetes | Control Plane | Admin User 
-#  import_tasks: ./admin-cert.yml
-#  when: "'localhost' in group_names"
-#  tags:
-#  - generate_the_admin_cert
 
 - name: Kubernetes | Control Plane | API Server
   import_tasks: ./api_server.yml
@@ -37,7 +8,6 @@
 
 - name: Kubernetes | Control Plane | Scheduler
   import_tasks: ./scheduler.yml
-
 
 - name: Kubernetes | Control Plane | Admin User 
   import_tasks: ./admin-user.yml

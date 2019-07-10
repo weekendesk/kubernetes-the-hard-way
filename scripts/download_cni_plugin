@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+CNI_PLUGIN_VERSION=$1
+
+tmpdir=$(mktemp -d)
+
+pushd "${tmpdir}" &> /dev/null
+
+curl -sL "https://github.com/etcd-io/etcd/releases/download/$ETCD3_RELEASE_VERSION/etcd-$ETCD3_RELEASE_VERSION-linux-amd64.tar.gz" | sudo tar -xvf - -C /opt/cni/bin/
+
+popd &> /dev/null
+
+rm -rf "${tmpdir}"
