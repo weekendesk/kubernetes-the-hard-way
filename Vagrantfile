@@ -6,7 +6,8 @@ Vagrant.require_version ">= 2.2.4"
 
 hosts = {
   masters: [1].map { |i| "master-node-#{i}" },
-  workers: (1..2).map { |i| "worker-node-#{i}" }
+  workers: (1..2).map { |i| "worker-node-#{i}" },
+  etcd_peers: [1].map { |i| "etcd-#{i}" }
 }
 
 Vagrant.configure("2") do |config|
@@ -29,10 +30,10 @@ Vagrant.configure("2") do |config|
       end
     end
 
-    inventory.puts "[etcd_peers]"
-    hosts[:masters].each do |node_name|
-      inventory.puts node_name
-    end  
+#    inventory.puts "[etcd_peers]"
+#    hosts[:masters].each do |node_name|
+#      inventory.puts node_name
+#    end  
   end
 
   # provision the vms

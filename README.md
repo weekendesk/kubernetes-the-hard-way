@@ -103,7 +103,7 @@ ansible-playbook kthw-playbook.yml --extra-vars="secrets_encryption_key='$encryp
 
 ```sh
 ansible-playbook kthw-playbook.yml -t download_api_server -l masters
-ansible-playbook kthw-playbook.yml -t start_api_server -l masters
+ansible-playbook kthw-playbook.yml -t start_api_server 
 ```
 
 ```sh
@@ -117,6 +117,13 @@ ansible-playbook kthw-playbook.yml -t configure_api_server_access_to_the_kubelet
 kubectl version --kubeconfig pki/admin_user/admin.kubeconfig
 kubectl get clusterrole "system:kube-apiserver-to-kubelet" --kubeconfig pki/admin_user/admin.kubeconfig
 kubectl get clusterrolebinding "system:kube-apiserver" --kubeconfig pki/admin_user/admin.kubeconfig
+
+api_host=$(ansible-inventory --list | jq -r '.masters.hosts[0]')
+etcd3_version=$(ansible $api_host -m debug -a "var=etcd3_version" | grep etcd3_version | cut -d':' -f2 | tr -d '[:space:]'| tr -d '"')
+vagrant ssh "${api_host}" -c "curl -sL 'https://github.com/etcd-io/etcd/releases/download/${etcd3_version}/etcd-${etcd3_version}-linux-amd64.tar.gz' | tar -zxf -"
+
+vagrant ssh "${api_host}"
+ETCDCTL_API=3 ~/etcdctl --cacert etcd_data-ca.pem --cert api_server-etcd_data-client.pem --key api_server-etcd_data-client-key.pem --endpoints ${etcd_cluster_member_endpoints}  get /registry/apiregistration.k8s.io/apiservices/v1.apps --prefix --keys-only
 ```
 
 ### Resources
