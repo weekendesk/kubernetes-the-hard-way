@@ -1,0 +1,33 @@
+---
+
+- name: Prerequisites | required commands are installed and in PATH
+  shell: command -v {{ item }} >/dev/null 2>&1
+  ignore_errors: yes
+  with_items:
+  - vagrant
+  - cfssl
+  - cfssljson
+  - kubectl
+  register: localhost_has_required_commands
+
+- name: Prerequisites | required libraries are installed
+  shell: pip list | grep {{ item }} 2>&1
+  ignore_errors: yes
+  with_items:
+  - netaddr
+  register: localhost_has_required_libraries
+
+- name: Prerequisites | instructions
+  assert:
+    that: "{{ 'failed' not in localhost_has_required_commands }}"
+    fail_msg: "you need to install the following commands: {{ localhost_has_required_commands.results | selectattr('failed', 'sameas', true) | list | map(attribute='item') | list | join(',')}}" 
+
+- name: Prerequisites | instructions
+  assert:
+    that: "{{ 'failed' not in localhost_has_required_libraries }}"
+    fail_msg: "you need to install the following libraries: {{ localhost_has_required_libraries.results | selectattr('failed', 'sameas', true) | list | map(attribute='item') | list | join(',')}}" 
+
+
+- name: Prerequisites | set_fact
+  set_fact: 
+    local_prerequisites_met: "{{ 'failed' not in localhost_has_required_commands and 'failed' not in localhost_has_required_libraries}}"

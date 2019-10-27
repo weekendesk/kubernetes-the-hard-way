@@ -1,0 +1,37 @@
+---
+- set_fact:
+    container_runtime_name: docker
+    container_runtime_endpoint: unix:///var/run/docker.sock
+  tags: 
+  - always
+
+- name: Container runtime | Docker | Install
+  import_role:
+    name: docker
+
+    
+- name: "Container runtime | Docker | add user {{ ansible_user_id }} to group docker"
+  become: yes
+  user:
+    name: "{{ ansible_user_id }}"
+    append: yes
+    groups: docker
+
+- name: Container runtime | Docker | Pod Networking
+  tags:
+  - setup_pod_networking
+  block:
+  - name: Container runtime | Docker | Pod Networking | Disable iptables and ip-masquerading
+    become: yes
+    lineinfile:
+      path: /lib/systemd/system/docker.service
+      regexp: '^ExecStart='
+      line: ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --iptables=false --ip-masq=false
+
+  - name: Container runtime | Docker | Pod Networking | Restart
+    become: yes
+    systemd:
+      name: docker
+      state: restarted
+
+

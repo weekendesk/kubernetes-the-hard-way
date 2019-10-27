@@ -1,0 +1,191 @@
+---
+
+- name: Etcd | Download
+  become: yes
+  script: ./scripts/download_etcd {{ etcd3_version }}
+  args:
+    creates: /usr/bin/etcd
+  when: "'etcd_peers' in group_names"
+  tags:
+  - download_etcd
+
+- name: Etcd | Create data directory
+  when: "'etcd_peers' in group_names"
+  tags:
+  - download_etcd
+  become: yes
+  file:
+    dest: /var/lib/etcd
+    state: directory
+    recurse: yes
+
+- name: Etcd | Cluster Member Auth | Certificate Authority | generate
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_etcd_cluster_auth_certificates
+  - generate_etcd_cluster_auth_ca
+  import_role:
+    name: certificate-authority
+  vars:
+    certificate_CN: "etcd-cluster"
+    certificate_authority_parent_ca_cert_file: "{{ root_ca_cert_file }}"
+    certificate_authority_parent_ca_key_file: "{{ root_ca_key_file }}"
+    certificate_authority_output_dir: "{{ pki_dir }}/etcd/cluster_auth/"
+
+- name: Etcd | Cluster Member Auth | Certificate Authority | distribute
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
+    mode: 0400
+  with_items:
+  - { src: "{{ pki_dir }}/etcd/cluster_auth/ca.pem", dest_filename: "etcd_cluster-ca.pem" }
+  - { src: "{{ pki_dir }}/etcd/cluster_auth/ca-key.pem", dest_filename: "etcd_cluster-ca-key.pem" }
+  when: "'etcd_peers' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_etcd_cluster_auth_certificates
+  - distribute_etcd_cluster_auth_ca
+
+
+- name: Etcd | Cluster Member Auth | Server Certificate | generate
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_etcd_cluster_auth_certificates
+  - generate_etcd_cluster_auth_server_certificate
+  import_role:
+    name: server-cert
+  vars:
+    certificate_CN: "etcd-server"
+    server_cert_parent_ca_cert_file: "{{ pki_dir }}/etcd/cluster_auth/ca.pem"
+    server_cert_parent_ca_key_file: "{{ pki_dir }}/etcd/cluster_auth/ca-key.pem"
+    server_cert_output_dir: "{{ pki_dir }}/etcd/cluster_auth/"
+    server_cert_hostnames: "{{ etcd_peers | map('extract', hostvars, 'ansible_all_ipv4_addresses') | list | flatten | union(['127.0.0.1']) | list }}"
+  
+- name: Etcd | Cluster Member Auth | Server Certificate | distribute
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
+    mode: 0400
+  with_items:
+  - { src: "{{ pki_dir }}/etcd/cluster_auth/server.pem", dest_filename: "etcd_cluster-server.pem" }
+  - { src: "{{ pki_dir }}/etcd/cluster_auth/server-key.pem", dest_filename: "etcd_cluster-server-key.pem" }
+  when: "'etcd_peers' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_etcd_cluster_auth_certificates
+  - distribute_etcd_cluster_auth_server_certificate
+
+
+
+
+- name: Etcd | Client Auth | Certificate Authority
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_etcd_client_auth_certificates
+  - generate_etcd_client_auth_ca
+  import_role:
+    name: certificate-authority
+  vars:
+    certificate_CN: "etcd-data"
+    certificate_authority_parent_ca_cert_file: "{{ root_ca_cert_file }}"
+    certificate_authority_parent_ca_key_file: "{{ root_ca_key_file }}"
+    certificate_authority_output_dir: "{{ pki_dir }}/etcd/client_auth/"
+
+- name: Etcd | Client Auth | Certificate Authority | distribute
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
+    mode: 0400
+  with_items:
+  - { src: "{{ pki_dir }}/etcd/client_auth/ca.pem", dest_filename: "etcd_data-ca.pem" }
+  - { src: "{{ pki_dir }}/etcd/client_auth/ca-key.pem", dest_filename: "etcd_data-ca-key.pem" }
+  when: "'etcd_peers' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_etcd_client_auth_certificates
+  - distribute_etcd_client_auth_ca
+
+- name: Etcd | Client Auth | Server Certificate | generate
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_etcd_client_auth_certificates
+  - generate_etcd_client_auth_server_certificate
+  import_role:
+    name: server-cert
+  vars:
+    certificate_CN: "etcd-data-server"
+    server_cert_parent_ca_cert_file: "{{ pki_dir }}/etcd/client_auth/ca.pem"
+    server_cert_parent_ca_key_file: "{{ pki_dir }}/etcd/client_auth/ca-key.pem"
+    server_cert_output_dir: "{{ pki_dir }}/etcd/client_auth/"
+    server_cert_hostnames: "{{ etcd_peers | map('extract', hostvars, 'ansible_all_ipv4_addresses') | list | flatten | union(['127.0.0.1']) | list }}"
+  
+- name: Etcd | Client Auth | Server Certificate | distribute
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
+    mode: 0400
+  with_items:
+  - { src: "{{ pki_dir }}/etcd/client_auth/server.pem", dest_filename: "etcd_data-server.pem" }
+  - { src: "{{ pki_dir }}/etcd/client_auth/server-key.pem", dest_filename: "etcd_data-server-key.pem" }
+  when: "'etcd_peers' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_etcd_client_auth_certificates
+  - distribute_etcd_client_auth_server_certificate
+
+
+- name: Etcd | Service | Create
+  when: "'etcd_peers' in group_names"
+  tags:
+  - start_etcd
+  become: yes
+  copy: 
+    dest: /etc/systemd/system/etcd.service
+    content: |
+      [Unit]
+        Description=etcd
+        Documentation=https://github.com/coreos
+
+      [Service]
+        Type=notify
+        ExecStart=/usr/bin/etcd \
+          --name "{{ ansible_hostname }}" \
+          --data-dir=/var/lib/etcd \
+          --initial-cluster-token "{{ kubernetes_cluster_id }}" \
+          --initial-cluster {{ etcd_peers | map('extract', hostvars, ['ansible_eth1', 'ipv4', 'address']) | list | map('regex_replace', '^(.*)$', 'https://\1:2380') | list | zip(etcd_peers) | list | map('reverse') | map('list') | map('join', '=') | list | join(',') }} \
+          --initial-cluster-state new \
+          --peer-client-cert-auth \
+          --peer-cert-file="{{ ansible_env.HOME }}/etcd_cluster-server.pem" \
+          --peer-key-file="{{ ansible_env.HOME }}/etcd_cluster-server-key.pem" \
+          --peer-trusted-ca-file="{{ ansible_env.HOME }}/etcd_cluster-ca.pem" \
+          --initial-advertise-peer-urls https://{{ etcd_cluster_ip_address }}:2380 \
+          --listen-peer-urls https://{{ etcd_cluster_ip_address }}:2380 \
+          --client-cert-auth \
+          --cert-file="{{ ansible_env.HOME }}/etcd_data-server.pem" \
+          --key-file="{{ ansible_env.HOME }}/etcd_data-server-key.pem" \
+          --trusted-ca-file="{{ ansible_env.HOME }}/etcd_data-ca.pem" \
+          --listen-client-urls https://{{ etcd_cluster_ip_address }}:2379,http://127.0.0.1:2379 \
+          --advertise-client-urls https://{{ etcd_cluster_ip_address }}:2379
+        Restart=on-failure
+        RestartSec=5
+
+      [Install]
+        WantedBy=multi-user.target
+
+- name: Etcd | Service | Start
+  when: "'etcd_peers' in group_names"
+  tags:
+  - start_etcd
+  become: yes
+  systemd:
+    name: etcd
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+
+- import_tasks: ./etcd_test_client.yml

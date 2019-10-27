@@ -1,0 +1,11 @@
+# certificate_CN: ""
+certificate_C: "{{ default_certificate_C | default('US') }}"
+certificate_L: "{{ default_certificate_L | default('Portland') }}"
+certificate_O: "{{ default_certificate_O | default(kubernetes_cluster_name) }}"
+certificate_OU: "{{ default_certificate_OU | default('Server') }}"
+certificate_ST: "{{ default_certificate_ST | default('Somewhere nice') }}"
+# client_cert_server_name: "server"
+# client_cert_parent_ca_cert_file: ""
+# client_cert_parent_ca_key_file: ""
+# client_cert_output_dir: ""
+client_cert_hostnames: []

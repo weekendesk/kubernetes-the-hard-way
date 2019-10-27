@@ -1,0 +1,18 @@
+---
+#- name: Kubernetes | Workers | Enables support for the kubectl port-forward command
+#  become: yes
+#  when: "'workers' in group_names"
+#  tags:
+#  - always
+#  apt:
+#    name: 
+#    - socat
+#    state: present
+
+# Kubelet
+- name: Kubernetes | Workers | Kubelet
+  import_tasks: ./kubelet.yml
+
+# Kube proxy
+- name: Kubernetes | Workers | Kube-proxy 
+  import_tasks: ./kube-proxy.yml

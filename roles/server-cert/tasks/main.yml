@@ -1,0 +1,92 @@
+
+- name: Server Certificate | Require the CA to be accessible
+  block:
+  - name: Server Certificate | stat the required CA files
+    stat:
+      path: "{{ item }}"
+    with_items: 
+    - "{{ server_cert_parent_ca_cert_file }}"
+    - "{{ server_cert_parent_ca_key_file }}"
+    register: ca_files_stat_result
+
+  - name: Server Certificate | the required CA files must exist
+    assert:
+      that: "{{ ca_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == ca_files_stat_result.results | length }}"
+      fail_msg: "Parent CA cert {{ server_cert_parent_ca_cert_file }} and key {{ server_cert_parent_ca_key_file }} are required"
+
+- name: Server Certificate | create the work directories
+  file:
+    path: "{{ server_cert_output_dir }}"
+    state: directory
+    recurse: yes
+
+- name: Server Certificate | build the signing configuration
+  copy:
+    dest: "{{ server_cert_output_dir }}/signing-config.json"
+    content: |
+      {
+        "signing": {
+          "default": {
+            "expiry": "8760h"
+          },
+          "profiles": {
+            "server": {
+              "usages": [
+                "signing", 
+                "key encipherment", 
+                "server auth", 
+                "client auth"
+              ],
+              "expiry": "8760h"
+            }
+          }
+        }
+      }
+    mode: 0600
+
+- name: Server Certificate | build the CSR
+  copy:
+    dest: "{{ server_cert_output_dir }}/csr.json"
+    content: |
+      {
+        "CN": "{{ certificate_CN }}",
+        "key": {
+          "algo": "rsa",
+          "size": 2048
+        },
+        "names": [
+          {
+            "C":  "{{ certificate_C }}",
+            "L":  "{{ certificate_L }}",
+            "O":  "{{ certificate_O }}",
+            "OU": "{{ certificate_OU }}",
+            "ST": "{{ certificate_ST }}"
+          }
+        ]
+      }
+    mode: 0600
+
+- name: Server Certificate | generate
+  shell: |
+    pushd {{ server_cert_output_dir }} ;
+
+    cfssl gencert \
+    -ca={{ server_cert_parent_ca_cert_file }} \
+    -ca-key={{ server_cert_parent_ca_key_file }} \
+    -config=signing-config.json \
+    -hostname={{ server_cert_hostnames | join(',') }} \
+    -profile=server \
+    csr.json | cfssljson -bare server
+
+    popd ;
+  args:
+      executable: bash
+
+- name: Server Certificate | cleanup
+  file: 
+    path: "{{ server_cert_output_dir }}/{{ item }}"
+    state: absent
+  with_items: 
+  - signing-config.json
+  - csr.json
+  - server.csr

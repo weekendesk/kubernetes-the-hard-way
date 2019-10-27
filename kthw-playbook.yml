@@ -1,0 +1,44 @@
+---
+- hosts: all
+  gather_facts: yes
+  tasks:
+  - set_fact:
+      pod_cidr: "{{ cluster_cidr | ipsubnet(24, ansible_play_batch.index(ansible_hostname) + 1) }}"
+    tags: 
+    - always
+    when: "'localhost' not in group_names"
+    
+  - name: Assert that local prerequisites are met
+    import_tasks: ./check_local_prerequisites.yml
+    when: "'localhost' in group_names"
+    tags:
+    - check_prerequisites
+
+  - name: Install required packages
+    become: yes
+    when: "'localhost' not in group_names"
+    tags:
+    - always
+    apt:
+      name: 
+      - curl
+      state: present
+  
+  - name: Root CA | generate 
+    when: "'localhost' in group_names"
+    tags:
+      - generate_the_root_ca
+    import_role:
+      name: certificate-authority
+    vars:
+      certificate_CN: "Kubernetes"
+      certificate_authority_output_dir: "{{ root_ca_dir }}"
+  
+  - name: Etcd
+    import_tasks: ./etcd.yml
+
+  - name: Setup the Kubernetes Control Plane
+    import_tasks: ./control_plane.yml
+
+  - name: Setup the Kubernetes Workers
+    import_tasks: ./workers.yml

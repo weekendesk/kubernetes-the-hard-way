@@ -1,0 +1,212 @@
+
+
+- name: Kubernetes | Control Plane | API Server | Etcd Authentication | Client Certificate | generate
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_client_certificates
+  - generate_api_server_client_certificate_for_etcd_data
+  import_role:
+    name: client-cert
+  vars:
+    certificate_CN: api-server
+    client_cert_server_name: etcd_data
+    client_cert_parent_ca_cert_file: "{{ pki_dir }}/etcd/client_auth/ca.pem"
+    client_cert_parent_ca_key_file: "{{ pki_dir }}/etcd/client_auth/ca-key.pem"
+    client_cert_output_dir: "{{ pki_dir }}/api_server"
+  
+
+- name: Kubernetes | Control Plane | API Server | Etcd Authentication | Client Certificate | distribute
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
+    mode: 0400
+  with_items:
+  - { src: "{{ pki_dir }}/etcd/client_auth/ca.pem", dest_filename: "etcd_data-ca.pem" }
+  - { src: "{{ pki_dir }}/api_server/etcd_data-client.pem", dest_filename: "api_server-etcd_data-client.pem" }
+  - { src: "{{ pki_dir }}/api_server/etcd_data-client-key.pem", dest_filename: "api_server-etcd_data-client-key.pem" }
+  when: "'masters' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_client_certificates
+  - distribute_api_server_client_certificate_for_etcd_data
+
+
+- name: Kubernetes | Control Plane | API Server | Service Account Authority | generate
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_service_account_ca
+  import_role:
+    name: certificate-authority
+  vars:
+    certificate_CN: "service-accounts"
+    certificate_authority_parent_ca_cert_file: "{{ root_ca_cert_file }}"
+    certificate_authority_parent_ca_key_file: "{{ root_ca_key_file }}"
+    certificate_authority_output_dir: "{{ pki_dir }}/service_accounts/"
+
+- name: Kubernetes | Control Plane | API Server | Service Account Authority | distribute
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
+    mode: 0400
+  with_items:
+  - { src: "{{ pki_dir }}/service_accounts/ca.pem", dest_filename: "service_accounts-ca.pem" }
+  - { src: "{{ pki_dir }}/service_accounts/ca-key.pem", dest_filename: "service_accounts-ca-key.pem" }
+  when: "'masters' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_service_account_ca
+
+- name: Kubernetes | Control Plane | API Server | Download
+  become: yes
+  script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+  with_items:
+  - kube-apiserver
+  args:
+    creates: /usr/bin/{{ item }}
+  when: "'masters' in group_names"
+  tags:
+  - download_kubernetes_control_plane
+  - download_api_server
+
+- name: Kubernetes | Control Plane | API Server | Server Certificate 
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_server_certificates
+  - generate_api_server_certificate
+  import_role:
+    name: server-cert
+  vars:
+    certificate_CN: "kubernetes"
+    server_cert_parent_ca_cert_file: "{{ root_ca_cert_file }}"
+    server_cert_parent_ca_key_file: "{{ root_ca_key_file }}"
+    server_cert_output_dir: "{{ pki_dir }}/api_server"
+    server_cert_hostnames: "{{ kubernetes_masters | map('extract', hostvars, 'ansible_all_ipv4_addresses') | list | flatten | union(['127.0.0.1', 'kubernetes.default']) | list }}"
+
+- name: Kubernetes | Control Plane | API Server | Distribute certificates
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
+    mode: 0400
+  with_items:
+  - { src: "{{ root_ca_cert_file }}" }
+  - { src: "{{ root_ca_key_file }}" }
+  - { src: "{{ pki_dir }}/api_server/server.pem", dest_filename: "api-server.pem" }
+  - { src: "{{ pki_dir }}/api_server/server-key.pem", dest_filename: "api-server-key.pem" }
+  when: "'masters' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_server_certificates
+  - distribute_api_server_certificate
+
+
+- name: Kubernetes | Control Plane | API Server | Security | Encryption
+  copy:
+    dest: "{{ ansible_env.HOME }}/etcd-data-encryption-config.yaml"
+    content: |
+      kind: EncryptionConfig
+      apiVersion: v1
+      resources:
+        - resources:
+            - secrets
+          providers:
+            - aescbc:
+                keys:
+                  - name: key1
+                    secret: "{{ secrets_encryption_key }}"
+            - identity: {}
+  when: "'masters' in group_names"
+  tags:
+  - configure_api_server_secrets_encryption
+
+- name: Kubernetes | Control Plane | API Server | Kubelet access | Configure
+  when: "'localhost' in group_names"
+  tags: configure_api_server_access_to_the_kubelets
+  block:
+  - name: Kubernetes | Control Plane | API Server | Kubelet access | Require the admin user cert
+    block:
+    - name: Kubernetes | Control Plane | API Server | Kubelet access | Require the admin user cert | Stat the files
+      stat:
+        path: "{{ file_that_should_exist }}"
+      with_items: 
+      - "{{ pki_dir }}/admin_user/admin.kubeconfig"
+      loop_control:
+        loop_var: file_that_should_exist
+      register: admin_user_cert_files_stat_result
+
+    - name: Kubernetes | Control Plane | API Server | Kubelet access | Require the admin user cert | The files must exist
+      assert:
+        that: "{{ admin_user_cert_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == admin_user_cert_files_stat_result.results | length }}"
+        fail_msg: "Admin user cert {{ client_cert_parent_ca_cert_file }} and key {{ client_cert_parent_ca_key_file }} are required"
+
+    - name: Kubernetes | Control Plane | API Server | Kubelet access | Require the admin user cert | Download kubectl
+      shell: "scripts/download_kubernetes_component kubectl '{{ kubernetes_version }}' {{playbook_dir}}"
+      args:
+        creates: "{{playbook_dir}}/kubectl"
+
+    - name: Kubernetes | Control Plane | API Server | Kubelet access | Create ClusterRole
+      shell: "{{playbook_dir}}/kubectl apply --kubeconfig '{{ pki_dir }}/admin_user/admin.kubeconfig' -f {{playbook_dir}}/apiserver-to-kubelet.clusterrole.yaml"
+
+    - name: Kubernetes | Control Plane | API Server | Kubelet access | Create ClusterRoleBinding
+      shell: "{{playbook_dir}}/kubectl apply --kubeconfig '{{ pki_dir }}/admin_user/admin.kubeconfig' -f {{playbook_dir}}/apiserver-to-kubelet.clusterrolebinding.yaml"
+
+- name: Kubernetes | Control Plane | API Server | Service | Create
+  when: "'masters' in group_names"
+  tags:
+  - start_api_server
+  become: yes
+  copy: 
+    dest: /etc/systemd/system/kube-apiserver.service
+    content: |
+      [Unit]
+        Description=Kubernetes API Server
+
+      [Service]
+        ExecStart=/usr/bin/kube-apiserver \
+          --advertise-address={{ ansible_eth1.ipv4.address }} \
+          --allow-privileged=true \
+          --apiserver-count=1 \
+          --audit-log-maxage=30 \
+          --audit-log-maxbackup=3 \
+          --audit-log-maxsize=100 \
+          --audit-log-path=/var/log/audit.log \
+          --authorization-mode=Node,RBAC \
+          --bind-address=0.0.0.0 \
+          --client-ca-file={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
+          --enable-admission-plugins=Initializers,NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
+          --enable-swagger-ui=true \
+          --etcd-cafile={{ ansible_env.HOME }}/etcd_data-ca.pem \
+          --etcd-certfile={{ ansible_env.HOME }}/api_server-etcd_data-client.pem \
+          --etcd-keyfile={{ ansible_env.HOME }}/api_server-etcd_data-client-key.pem \
+          --etcd-servers={{ etcd_peers | map('extract', hostvars, ['ansible_eth1', 'ipv4', 'address']) | list | map('regex_replace', '^(.*)$', 'https://\1:2379') | list | join(',') }} \
+          --event-ttl=1h \
+          --experimental-encryption-provider-config={{ ansible_env.HOME }}/etcd-data-encryption-config.yaml \
+          --kubelet-certificate-authority={{ ansible_env.HOME }}/{{ root_ca_cert_file | basename }} \
+          --kubelet-client-certificate={{ ansible_env.HOME }}/api-server.pem  \
+          --kubelet-client-key={{ ansible_env.HOME }}/api-server-key.pem \
+          --kubelet-https=true \
+          --runtime-config=api/all \
+          --service-account-key-file={{ ansible_env.HOME }}/service_accounts-ca.pem \
+          --service-cluster-ip-range={{ services_cidr }} \
+          --service-node-port-range=30000-32767 \
+          --tls-cert-file={{ ansible_env.HOME }}/api-server.pem \
+          --tls-private-key-file={{ ansible_env.HOME }}/api-server-key.pem \
+          --v=2
+        Restart=on-failure
+        RestartSec=5
+
+      [Install]
+        WantedBy=multi-user.target
+
+- name: Kubernetes | Control Plane | API Server | Service | Start
+  when: "'masters' in group_names"
+  tags:
+  - start_api_server
+  become: yes
+  systemd:
+    name: kube-apiserver
+    enabled: yes
+    state: started
+    daemon_reload: yes

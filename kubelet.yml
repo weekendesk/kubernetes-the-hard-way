@@ -1,0 +1,223 @@
+---
+- name: Kubernetes | Kubelet | Download
+  become: yes
+  script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+  with_items:
+  - kubelet
+  args:
+    creates: /usr/bin/{{ item }}
+  when: "'workers' in group_names"
+  tags:
+  - download_kubelet
+
+# we want to generate a client cert for every worker, so we need to loop over workers
+# However, import_task doesn't support loops 
+# we can't use it.
+# Also, include_role does not support tags
+# so we need to wrap it in a block
+- name: Kubernetes | Kubelet | API Authentication | Client Certificate
+  when: "'localhost' in group_names"
+  tags:
+  - generate_certificates
+  - generate_client_certificates
+  - generate_kubelet_client_certificate
+  block:
+  - include_role:
+      name: client-cert
+    vars:
+      certificate_CN: system:node:{{ item }}
+      certificate_O: system:nodes
+      client_cert_server_name: api_server
+      client_cert_parent_ca_cert_file: "{{ root_ca_cert_file }}"
+      client_cert_parent_ca_key_file: "{{ root_ca_key_file }}"
+      client_cert_output_dir: "{{ pki_dir }}/kubelet/{{ item }}"
+      client_cert_hostnames: "{{ hostvars[item].ansible_all_ipv4_addresses | union([ item ]) }}"
+    with_items: "{{ kubernetes_workers }}"
+  
+- name: Kubernetes | Kubelet | API authentication | Distribute the client certificate
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest_filename if ('dest_filename' in item) else (item.src | basename) }}"
+    mode: 0400
+  with_items:
+  - { src: "{{ root_ca_cert_file }}" }
+  - { src: "{{ pki_dir }}/kubelet/{{ inventory_hostname }}/api_server-client.pem", dest_filename: "kubelet.pem" }
+  - { src: "{{ pki_dir }}/kubelet/{{ inventory_hostname }}/api_server-client-key.pem", dest_filename: "kubelet-key.pem" }
+  when: "'workers' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_client_certificates
+  - distribute_kubelet_client_certificate
+
+- name: Kubernetes | Kubelet | API authentication | Configure
+  when: "'workers' in group_names"
+  tags:
+  - distribute_certificates
+  - distribute_client_certificates
+  - distribute_kubelet_client_certificate
+  - configure_kubelet_access_to_the_api_server
+  block: 
+  - debug:
+      var: kubernetes_api_ip_address
+  - name: Kubernetes | Kubelet | API authentication | Download kubectl
+    become: yes
+    script: "./scripts/download_kubernetes_component '{{ item }}' '{{ kubernetes_version }}'"
+    with_items:
+    - kubectl
+    args:
+      creates: /usr/bin/{{ item }}
+
+  - name: Kubernetes | Kubelet | API authentication | Configure api server location
+    shell: >
+      kubectl config set-cluster {{ kubernetes_cluster_id }} \
+      --certificate-authority={{ ansible_env.HOME }}/ca.pem \
+      --embed-certs=true \
+      --server=https://{{ kubernetes_api_ip_address }}:6443 \
+      --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+
+  - name: Kubernetes | Kubelet | API authentication | Configure user credentials
+    shell: >
+      kubectl config set-credentials system:node:{{ inventory_hostname }} \
+        --client-certificate={{ ansible_env.HOME }}/kubelet.pem \
+        --client-key={{ ansible_env.HOME }}/kubelet-key.pem \
+        --embed-certs=true \
+        --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+
+  - name: Kubernetes | Kubelet | API authentication | Configure default context
+    shell: >
+      kubectl config set-context default \
+        --cluster={{ kubernetes_cluster_id }} \
+        --user=system:node:{{ inventory_hostname }} \
+        --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+
+  - name: Kubernetes | Kubelet | API authentication | Use default context
+    shell: >
+      kubectl config use-context default --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig
+  
+- name: Install a CRI-compatible container runtime
+  import_tasks: ./container_runtime.yml
+  when: "'workers' in group_names"
+  tags:
+  - install_container_runtime
+
+- name: Kubernetes | Kubelet | Pod Networking
+  when: "'workers' in group_names"
+  tags:
+  - setup_pod_networking
+  block: 
+  - name: Kubernetes | Kubelet | Pod Networking | Create directories
+    become: yes
+    file:
+      dest: "{{ item }}"
+      state: directory
+      recurse: yes
+    with_items: 
+    - /etc/cni/net.d
+    - /opt/cni/bin
+
+  - name:  Kubernetes | Kubelet | Pod Networking | Download CNI Plugin
+    become: yes
+    script: "./scripts/download_cni_plugin 'v0.6.0'"
+    
+  - name: Kubernetes | Kubelet | Pod Networking | configure
+    become: yes
+    copy: 
+      dest: /etc/cni/net.d/10-bridge.conf
+      content: |
+        {
+            "cniVersion": "0.3.1",
+            "name": "bridge",
+            "type": "bridge",
+            "bridge": "cnio0",
+            "isGateway": true,
+            "ipMasq": true,
+            "ipam": {
+                "type": "host-local",
+                "ranges": [
+                  [
+                    {
+                      "subnet": "{{ pod_cidr }}"
+                    }
+                  ]
+                ],
+                "routes": [
+                  {
+                    "dst": "0.0.0.0/0"
+                  }
+                ]
+            }
+        }
+
+  - name: Kubernetes | Kubelet | Pod Networking | Configure loopback
+    become: yes
+    copy: 
+      dest: /etc/cni/net.d/99-loopback.conf
+      content: |
+        {
+            "cniVersion": "0.3.1",
+            "type": "loopback"
+        }
+
+- name: Kubernetes | Kubelet | Configure
+  tags:
+  - start_kubelet
+  copy:
+    dest: "{{ ansible_env.HOME }}/kubelet-config.yaml"
+    content: |
+      kind: KubeletConfiguration
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      authentication:
+        anonymous:
+          enabled: false
+        webhook:
+          enabled: true
+        x509:
+          clientCAFile: "{{ ansible_env.HOME }}/ca.pem"
+      authorization:
+        mode: Webhook
+      clusterDomain: "cluster.local"
+      clusterDNS:
+        - "{{ dns_server_service_ip_address }}"
+      podCIDR: "{{ pod_cidr }}"
+      resolvConf: "/run/systemd/resolve/resolv.conf"
+      runtimeRequestTimeout: "15m"
+      tlsCertFile: "{{ ansible_env.HOME }}/kubelet.pem"
+      tlsPrivateKeyFile: "{{ ansible_env.HOME }}/kubelet-key.pem"
+
+- name: Kubernetes | Kubelet | Service
+  tags:
+  - start_kubelet
+  when: "'workers' in group_names"
+  block:
+  - name: Kubernetes | Kubelet | Service | Create
+    become: yes
+    copy: 
+      dest: /etc/systemd/system/kubelet.service
+      content: |
+        [Unit]
+        Description=Kubernetes Kubelet
+        Documentation=https://github.com/kubernetes/kubernetes
+        After={{ container_runtime_name }}.service
+        Requires={{ container_runtime_name }}.service
+
+        [Service]
+        ExecStart=/usr/bin/kubelet \
+          --config={{ ansible_env.HOME }}/kubelet-config.yaml \
+          --kubeconfig={{ ansible_env.HOME }}/kubelet.kubeconfig \
+          --network-plugin=cni \
+          --register-node=true \
+          --fail-swap-on=false \
+          --v=2
+        Restart=on-failure
+        RestartSec=5
+
+        [Install]
+        WantedBy=multi-user.target
+
+  - name: Kubernetes | Kubelet | Service | Start
+    become: yes
+    systemd:
+      name: kubelet
+      enabled: yes
+      state: started
+      daemon_reload: yes

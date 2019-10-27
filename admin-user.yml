@@ -1,0 +1,43 @@
+---
+- name: Kubernetes | Control Plane | Admin User | API Authentication | Client Certificate | Create
+  import_role:
+    name: client-cert
+  vars:
+    certificate_CN: "admin"
+    certificate_O: "system:masters"
+    client_cert_server_name: "api_server"
+    client_cert_parent_ca_cert_file: "{{ root_ca_cert_file }}"
+    client_cert_parent_ca_key_file: "{{ root_ca_key_file }}"
+    client_cert_output_dir: "{{ pki_dir }}/admin_user"
+
+- name: Kubernetes | Control Plane | Admin User | API Authentication | Configure
+  block: 
+  - name: Kubernetes | Control Plane | Admin User | API Authentication | Configure api server location
+    shell: >
+      kubectl config set-cluster {{ kubernetes_cluster_id }} \
+      --certificate-authority={{ root_ca_cert_file }} \
+      --embed-certs=true \
+      --server=https://{{ kubernetes_api_ip_address }}:6443 \
+      --kubeconfig={{ pki_dir }}/admin_user/admin.kubeconfig
+
+  - name: Kubernetes | Control Plane | Admin User | API Authentication | Configure user credentials
+    shell: >
+      kubectl config set-credentials admin \
+        --client-certificate={{ pki_dir }}/admin_user/api_server-client.pem \
+        --client-key={{ pki_dir }}/admin_user/api_server-client-key.pem \
+        --embed-certs=true \
+        --kubeconfig={{ pki_dir }}/admin_user/admin.kubeconfig
+
+  - name: Kubernetes | Control Plane | Admin User | API Authentication | Configure default context
+    shell: >
+      kubectl config set-context default \
+        --cluster={{ kubernetes_cluster_id }} \
+        --user=admin \
+        --kubeconfig={{ pki_dir }}/admin_user/admin.kubeconfig
+
+  - name: Kubernetes | Control Plane | Admin User | API Authentication | Use default context
+    shell: >
+      kubectl config use-context default --kubeconfig={{ pki_dir }}/admin_user/admin.kubeconfig
+
+
+

@@ -1,0 +1,96 @@
+
+- name: Client Certificate | Require the CA to be accessible
+  block:
+  - name: Client Certificate | stat the required CA files
+    stat:
+      path: "{{ file_that_should_exist }}"
+    with_items: 
+    - "{{ client_cert_parent_ca_cert_file }}"
+    - "{{ client_cert_parent_ca_key_file }}"
+    loop_control:
+      loop_var: file_that_should_exist
+    register: ca_files_stat_result
+
+  - name: Client Certificate | the required CA files must exist
+    assert:
+      that: "{{ ca_files_stat_result.results | map(attribute='stat') | list | selectattr('exists', 'sameas', true) | list | length == ca_files_stat_result.results | length }}"
+      fail_msg: "Parent CA cert {{ client_cert_parent_ca_cert_file }} and key {{ client_cert_parent_ca_key_file }} are required"
+
+- name: Client Certificate | create the work directories
+  file:
+    path: "{{ client_cert_output_dir }}"
+    state: directory
+    recurse: yes
+
+- name: Client Certificate | build the signing configuration
+  copy:
+    dest: "{{ client_cert_output_dir }}/signing-config.json"
+    content: |
+      {
+        "signing": {
+          "default": {
+            "expiry": "8760h"
+          },
+          "profiles": {
+            "client": {
+              "usages": [
+                "signing", 
+                "key encipherment", 
+                "server auth", 
+                "client auth"
+              ],
+              "expiry": "8760h"
+            }
+          }
+        }
+      }
+    mode: 0600
+
+- name: Client Certificate | build the CSR
+  copy:
+    dest: "{{ client_cert_output_dir }}/csr.json"
+    content: |
+      {
+        "CN": "{{ certificate_CN }}",
+        "key": {
+          "algo": "rsa",
+          "size": 2048
+        },
+        "names": [
+          {
+            "C" : "{{ certificate_C }}",
+            "L" : "{{ certificate_L }}",
+            "O" : "{{ certificate_O }}",
+            "OU": "{{ certificate_OU }}",
+            "ST": "{{ certificate_ST }}"
+          }
+        ]
+      }
+    mode: 0600
+      
+- name: Client Certificate | generate
+  shell: |
+    pushd {{ client_cert_output_dir }} ;
+
+    cfssl gencert \
+      -ca={{ client_cert_parent_ca_cert_file }} \
+      -ca-key={{ client_cert_parent_ca_key_file }} \
+      -config=signing-config.json \
+      {{ ( '-hostname=' ~ (client_cert_hostnames | join(',')) ) if (client_cert_hostnames | length > 0) else '' }} \
+      -profile=client \
+      csr.json | cfssljson -bare {{ client_cert_server_name }}-client
+
+    popd ;
+  args:
+      executable: bash
+
+- name: Client Certificate | cleanup
+  file: 
+    path: "{{ client_cert_output_dir }}/{{ file_to_cleanup }}"
+    state: absent
+  with_items: 
+  - signing-config.json
+  - csr.json
+  - "{{ client_cert_server_name }}-client.csr"
+  loop_control:
+    loop_var: file_to_cleanup
